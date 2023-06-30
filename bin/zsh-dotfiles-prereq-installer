@@ -349,8 +349,9 @@ if [ -z "$HOMEBREW_PREFIX" ] || [ -z "$HOMEBREW_REPOSITORY" ]; then
     HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
   fi
 fi
-# if homebrew doesn't exist, install it.
-[ -d "$HOMEBREW_PREFIX" ] || /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+logn "if homebrew doesn't exist, install it. "
+[ -d "$HOMEBREW_REPOSITORY" ] || /bin/bash -xc "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 
 # sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
