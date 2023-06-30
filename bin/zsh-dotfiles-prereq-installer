@@ -19,17 +19,14 @@
 # backup ~/.local/bin
 # backup ~/.pyenv
 
-
 # Borrow some of strap.sh
 # SOURCE: https://raw.githubusercontent.com/MikeMcQuaid/strap/6950fe0db92215153cfc9d6c7e749783e2ca9430/bin/strap.sh
-
 
 set -e
 # [ -n "$ZSH_DOTFILES_PREP_DEBUG" ] && set -x
 
 [[ $1 == "--debug" || -o xtrace ]] && ZSH_DOTFILES_PREP_DEBUG="1"
 ZSH_DOTFILES_PREP_SUCCESS=""
-
 
 sudo_askpass() {
   if [ -n "$SUDO_ASKPASS" ]; then
@@ -171,7 +168,6 @@ escape() {
   printf '%s' "${1//\'/\'}"
 }
 
-
 # Given a list of scripts in the dotfiles repo, run the first one that exists
 run_dotfile_scripts() {
   if [ -d ~/.dotfiles ]; then
@@ -193,7 +189,7 @@ run_dotfile_scripts() {
 }
 
 [ "$USER" = "root" ] && abort "Run Strap as yourself, not root."
-groups | grep $Q -E "\b(admin)\b" || abort "Add $USER to the admin group."
+groups | grep "$Q" -E "\b(admin)\b" || abort "Add $USER to the admin group."
 
 # Prevent sleeping during script execution, as long as the machine is on AC power
 caffeinate -s -w $$ &
@@ -201,13 +197,13 @@ caffeinate -s -w $$ &
 # Check and, if necessary, enable sudo authentication using TouchID.
 # Don't care about non-alphanumeric filenames when doing a specific match
 # shellcheck disable=SC2010
-if ls /usr/lib/pam | grep $Q "pam_tid.so"; then
+if ls /usr/lib/pam | grep "$Q" "pam_tid.so"; then
   logn "Configuring sudo authentication using TouchID:"
   PAM_FILE="/etc/pam.d/sudo"
   FIRST_LINE="# sudo: auth account password session"
-  if grep $Q pam_tid.so "$PAM_FILE"; then
+  if grep "$Q" pam_tid.so "$PAM_FILE"; then
     logk
-  elif ! head -n1 "$PAM_FILE" | grep $Q "$FIRST_LINE"; then
+  elif ! head -n1 "$PAM_FILE" | grep "$Q" "$FIRST_LINE"; then
     logskip "$PAM_FILE is not in the expected format!"
   else
     TOUCHID_LINE="auth       sufficient     pam_tid.so"
@@ -287,7 +283,7 @@ fi
 
 # Check if the Xcode license is agreed to and agree if not.
 xcode_license() {
-  if /usr/bin/xcrun clang 2>&1 | grep $Q license; then
+  if /usr/bin/xcrun clang 2>&1 | grep "$Q" license; then
     if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
       logn "Asking for Xcode license confirmation:"
       sudo_askpass xcodebuild -license
@@ -353,7 +349,6 @@ fi
 logn "if homebrew doesn't exist, install it. "
 [ -d "$HOMEBREW_REPOSITORY" ] || NONINTERACTIVE=1 /bin/bash -xc "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-
 # sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
 # if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
 #   sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
@@ -389,7 +384,7 @@ logk
 
 # Check and install any remaining software updates.
 logn "Checking for software updates:"
-if softwareupdate -l 2>&1 | grep $Q "No new software available."; then
+if softwareupdate -l 2>&1 | grep "$Q" "No new software available."; then
   logk
 else
   echo
@@ -402,7 +397,6 @@ else
     echo "SKIPPED (for CI)"
   fi
 fi
-
 
 # # Install from local Brewfile
 # if [ -f "$HOME/.Brewfile" ]; then
