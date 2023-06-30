@@ -1,0 +1,500 @@
+#!/usr/bin/env bash
+#/ Usage: bin/zsh-dotfiles-prereq-installer [--debug]
+#/ Install development dependencies on macOS.
+# SOURCE: https://github.com/search?q=repo%3AMikeMcQuaid%2Fstrap%20Xcode&type=code
+
+# Install homebrew
+# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Install compat shell scripts to set env vars
+# Backup .zsh* .profile .bash*, configs for certain apps like:
+#
+
+# > ~/.config
+# bpytop  configstore   fontconfig  gh    iterm2   lvim      op         sourcery
+# cheat   ffmpeg-tools  gallery-dl  htop  litecli  neofetch  powerline  wandb
+
+# backup ~/.asdf
+# backup ~/bin
+# backup ~/.bin
+# backup ~/.local/bin
+# backup ~/.pyenv
+
+
+# Borrow some of strap.sh
+# SOURCE: https://raw.githubusercontent.com/MikeMcQuaid/strap/6950fe0db92215153cfc9d6c7e749783e2ca9430/bin/strap.sh
+
+
+set -e
+# [ -n "$ZSH_DOTFILES_PREP_DEBUG" ] && set -x
+
+[[ $1 == "--debug" || -o xtrace ]] && ZSH_DOTFILES_PREP_DEBUG="1"
+ZSH_DOTFILES_PREP_SUCCESS=""
+
+
+sudo_askpass() {
+  if [ -n "$SUDO_ASKPASS" ]; then
+    sudo --askpass "$@"
+  else
+    sudo "$@"
+  fi
+}
+
+cleanup() {
+  set +e
+  sudo_askpass rm -rf "$CLT_PLACEHOLDER" "$SUDO_ASKPASS" "$SUDO_ASKPASS_DIR"
+  sudo --reset-timestamp
+  if [ -z "$ZSH_DOTFILES_PREP_SUCCESS" ]; then
+    if [ -n "$ZSH_DOTFILES_PREP_STEP" ]; then
+      echo "!!! $ZSH_DOTFILES_PREP_STEP FAILED" >&2
+    else
+      echo "!!! FAILED" >&2
+    fi
+    if [ -z "$ZSH_DOTFILES_PREP_DEBUG" ]; then
+      echo "!!! Run '$0 --debug' for debugging output." >&2
+      echo "!!! If you're stuck: file an issue with debugging output at:" >&2
+      echo "!!!   $ZSH_DOTFILES_PREP_ISSUES_URL" >&2
+    fi
+  fi
+}
+
+trap "cleanup" EXIT
+
+if [ -n "$ZSH_DOTFILES_PREP_DEBUG" ]; then
+  set -x
+else
+  ZSH_DOTFILES_PREP_QUIET_FLAG="-q"
+  Q="$ZSH_DOTFILES_PREP_QUIET_FLAG"
+fi
+
+STDIN_FILE_DESCRIPTOR="0"
+[ -t "$STDIN_FILE_DESCRIPTOR" ] && ZSH_DOTFILES_PREP_INTERACTIVE="1"
+
+# We want to always prompt for sudo password at least once rather than doing
+# root stuff unexpectedly.
+sudo --reset-timestamp
+
+# functions for turning off debug for use when handling the user password
+clear_debug() {
+  set +x
+}
+
+reset_debug() {
+  if [ -n "$ZSH_DOTFILES_PREP_DEBUG" ]; then
+    set -x
+  fi
+}
+
+# Initialise (or reinitialise) sudo to save unhelpful prompts later.
+sudo_init() {
+  if [ -z "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+    return
+  fi
+
+  # If TouchID for sudo is setup: use that instead.
+  if grep -q pam_tid /etc/pam.d/sudo; then
+    return
+  fi
+
+  local SUDO_PASSWORD SUDO_PASSWORD_SCRIPT
+
+  if ! sudo --validate --non-interactive &>/dev/null; then
+    while true; do
+      read -rsp "--> Enter your password (for sudo access):" SUDO_PASSWORD
+      echo
+      if sudo --validate --stdin 2>/dev/null <<<"$SUDO_PASSWORD"; then
+        break
+      fi
+
+      unset SUDO_PASSWORD
+      echo "!!! Wrong password!" >&2
+    done
+
+    clear_debug
+    SUDO_PASSWORD_SCRIPT="$(
+      cat <<BASH
+#!/bin/bash
+echo "$SUDO_PASSWORD"
+BASH
+    )"
+    unset SUDO_PASSWORD
+    SUDO_ASKPASS_DIR="$(mktemp -d)"
+    SUDO_ASKPASS="$(mktemp "$SUDO_ASKPASS_DIR"/strap-askpass-XXXXXXXX)"
+    chmod 700 "$SUDO_ASKPASS_DIR" "$SUDO_ASKPASS"
+    bash -c "cat > '$SUDO_ASKPASS'" <<<"$SUDO_PASSWORD_SCRIPT"
+    unset SUDO_PASSWORD_SCRIPT
+    reset_debug
+
+    export SUDO_ASKPASS
+  fi
+}
+
+sudo_refresh() {
+  clear_debug
+  if [ -n "$SUDO_ASKPASS" ]; then
+    sudo --askpass --validate
+  else
+    sudo_init
+  fi
+  reset_debug
+}
+
+abort() {
+  ZSH_DOTFILES_PREP_STEP=""
+  echo "!!! $*" >&2
+  exit 1
+}
+
+log() {
+  ZSH_DOTFILES_PREP_STEP="$*"
+  sudo_refresh
+  echo "--> $*"
+}
+
+logn() {
+  ZSH_DOTFILES_PREP_STEP="$*"
+  sudo_refresh
+  printf -- "--> %s " "$*"
+}
+
+logk() {
+  ZSH_DOTFILES_PREP_STEP=""
+  echo "OK"
+}
+
+logskip() {
+  ZSH_DOTFILES_PREP_STEP=""
+  echo "SKIPPED"
+  echo "$*"
+}
+
+escape() {
+  printf '%s' "${1//\'/\'}"
+}
+
+
+# Given a list of scripts in the dotfiles repo, run the first one that exists
+run_dotfile_scripts() {
+  if [ -d ~/.dotfiles ]; then
+    (
+      cd ~/.dotfiles
+      for i in "$@"; do
+        if [ -f "$i" ] && [ -x "$i" ]; then
+          log "Running dotfiles $i:"
+          if [ -z "$ZSH_DOTFILES_PREP_DEBUG" ]; then
+            "$i" 2>/dev/null
+          else
+            "$i"
+          fi
+          break
+        fi
+      done
+    )
+  fi
+}
+
+[ "$USER" = "root" ] && abort "Run Strap as yourself, not root."
+groups | grep $Q -E "\b(admin)\b" || abort "Add $USER to the admin group."
+
+# Prevent sleeping during script execution, as long as the machine is on AC power
+caffeinate -s -w $$ &
+
+# Check and, if necessary, enable sudo authentication using TouchID.
+# Don't care about non-alphanumeric filenames when doing a specific match
+# shellcheck disable=SC2010
+if ls /usr/lib/pam | grep $Q "pam_tid.so"; then
+  logn "Configuring sudo authentication using TouchID:"
+  PAM_FILE="/etc/pam.d/sudo"
+  FIRST_LINE="# sudo: auth account password session"
+  if grep $Q pam_tid.so "$PAM_FILE"; then
+    logk
+  elif ! head -n1 "$PAM_FILE" | grep $Q "$FIRST_LINE"; then
+    logskip "$PAM_FILE is not in the expected format!"
+  else
+    TOUCHID_LINE="auth       sufficient     pam_tid.so"
+    sudo_askpass sed -i .bak -e \
+      "s/$FIRST_LINE/$FIRST_LINE\n$TOUCHID_LINE/" \
+      "$PAM_FILE"
+    sudo_askpass rm "$PAM_FILE.bak"
+    logk
+  fi
+fi
+
+# Set some basic security settings.
+logn "Configuring security settings:"
+# sudo_askpass defaults write com.apple.Safari \
+#   com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaEnabled \
+#   -bool false
+# sudo_askpass defaults write com.apple.Safari \
+#   com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaEnabledForLocalFiles \
+#   -bool false
+# sudo_askpass defaults write com.apple.screensaver askForPassword -int 1
+# sudo_askpass defaults write com.apple.screensaver askForPasswordDelay -int 0
+# sudo_askpass defaults write /Library/Preferences/com.apple.alf globalstate -int 1
+# sudo_askpass launchctl load /System/Library/LaunchDaemons/com.apple.alf.agent.plist 2>/dev/null
+
+# if [ -n "$ZSH_DOTFILES_PREP_GIT_NAME" ] && [ -n "$ZSH_DOTFILES_PREP_GIT_EMAIL" ]; then
+#   LOGIN_TEXT=$(escape "Found this computer? Please contact $ZSH_DOTFILES_PREP_GIT_NAME at $ZSH_DOTFILES_PREP_GIT_EMAIL.")
+#   echo "$LOGIN_TEXT" | grep -q '[()]' && LOGIN_TEXT="'$LOGIN_TEXT'"
+#   sudo_askpass defaults write /Library/Preferences/com.apple.loginwindow \
+#     LoginwindowText \
+#     "$LOGIN_TEXT"
+# fi
+# logk
+
+# # Check and enable full-disk encryption.
+# logn "Checking full-disk encryption status:"
+# if fdesetup status | grep $Q -E "FileVault is (On|Off, but will be enabled after the next restart)."; then
+#   logk
+# elif [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
+#   echo "SKIPPED (for CI)"
+# elif [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+#   echo
+#   log "Enabling full-disk encryption on next reboot:"
+#   sudo_askpass fdesetup enable -user "$USER" |
+#     tee ~/Desktop/"FileVault Recovery Key.txt"
+#   logk
+# else
+#   echo
+#   abort "Run 'sudo fdesetup enable -user \"$USER\"' to enable full-disk encryption."
+# fi
+
+# Install the Xcode Command Line Tools.
+if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
+  log "Installing the Xcode Command Line Tools:"
+  CLT_PLACEHOLDER="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
+  sudo_askpass touch "$CLT_PLACEHOLDER"
+
+  CLT_PACKAGE=$(softwareupdate -l |
+    grep -B 1 "Command Line Tools" |
+    awk -F"*" '/^ *\*/ {print $2}' |
+    sed -e 's/^ *Label: //' -e 's/^ *//' |
+    sort -V |
+    tail -n1)
+  sudo_askpass softwareupdate -i "$CLT_PACKAGE"
+  sudo_askpass rm -f "$CLT_PLACEHOLDER"
+  if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
+    if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+      echo
+      logn "Requesting user install of Xcode Command Line Tools:"
+      xcode-select --install
+    else
+      echo
+      abort "Run 'xcode-select --install' to install the Xcode Command Line Tools."
+    fi
+  fi
+  logk
+fi
+
+# Check if the Xcode license is agreed to and agree if not.
+xcode_license() {
+  if /usr/bin/xcrun clang 2>&1 | grep $Q license; then
+    if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+      logn "Asking for Xcode license confirmation:"
+      sudo_askpass xcodebuild -license
+      logk
+    else
+      abort "Run 'sudo xcodebuild -license' to agree to the Xcode license."
+    fi
+  fi
+}
+xcode_license
+
+# # Setup Git configuration.
+# logn "Configuring Git:"
+# if [ -n "$ZSH_DOTFILES_PREP_GIT_NAME" ] && ! git config user.name >/dev/null; then
+#   git config --global user.name "$ZSH_DOTFILES_PREP_GIT_NAME"
+# fi
+
+# if [ -n "$ZSH_DOTFILES_PREP_GIT_EMAIL" ] && ! git config user.email >/dev/null; then
+#   git config --global user.email "$ZSH_DOTFILES_PREP_GIT_EMAIL"
+# fi
+
+# if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && [ "$(git config github.user)" != "$ZSH_DOTFILES_PREP_GITHUB_USER" ]; then
+#   git config --global github.user "$ZSH_DOTFILES_PREP_GITHUB_USER"
+# fi
+
+# # Squelch git 2.x warning message when pushing
+# if ! git config push.default >/dev/null; then
+#   git config --global push.default simple
+# fi
+
+# # Setup GitHub HTTPS credentials.
+# if git credential-osxkeychain 2>&1 | grep $Q "git.credential-osxkeychain"; then
+#   # Actually execute the credential in case it's a wrapper script for credential-osxkeychain
+#   if git "credential-$(git config --global credential.helper 2>/dev/null)" 2>&1 |
+#     grep -v $Q "git.credential-osxkeychain"; then
+#     git config --global credential.helper osxkeychain
+#   fi
+
+#   if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && [ -n "$ZSH_DOTFILES_PREP_GITHUB_TOKEN" ]; then
+#     printf 'protocol=https\nhost=github.com\n' | git credential reject
+#     printf 'protocol=https\nhost=github.com\nusername=%s\npassword=%s\n' \
+#       "$ZSH_DOTFILES_PREP_GITHUB_USER" "$ZSH_DOTFILES_PREP_GITHUB_TOKEN" |
+#       git credential approve
+#   fi
+# fi
+# logk
+
+# Setup Homebrew directory and permissions.
+logn "Installing Homebrew:"
+HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
+HOMEBREW_REPOSITORY="$(brew --repository 2>/dev/null || true)"
+if [ -z "$HOMEBREW_PREFIX" ] || [ -z "$HOMEBREW_REPOSITORY" ]; then
+  UNAME_MACHINE="$(/usr/bin/uname -m)"
+  if [[ $UNAME_MACHINE == "arm64" ]]; then
+    HOMEBREW_PREFIX="/opt/homebrew"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+  else
+    HOMEBREW_PREFIX="/usr/local"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+  fi
+fi
+# if homebrew doesn't exist, install it.
+[ -d "$HOMEBREW_PREFIX" ] || /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+
+# sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
+# if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
+#   sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
+# fi
+# (
+#   cd "$HOMEBREW_PREFIX"
+#   sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+#   sudo_askpass chown "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+# )
+
+# [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
+# sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
+
+# if [ $HOMEBREW_PREFIX != $HOMEBREW_REPOSITORY ]; then
+#   ln -sf "$HOMEBREW_REPOSITORY/bin/brew" "$HOMEBREW_PREFIX/bin/brew"
+# fi
+
+# # Download Homebrew.
+# export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
+# git init $Q
+# git config remote.origin.url "https://github.com/Homebrew/brew"
+# git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+# git fetch $Q --tags --force
+# git reset $Q --hard origin/master
+# unset GIT_DIR GIT_WORK_TREE
+# logk
+
+# Update Homebrew.
+export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+logn "Updating Homebrew:"
+brew update --quiet
+logk
+
+# Check and install any remaining software updates.
+logn "Checking for software updates:"
+if softwareupdate -l 2>&1 | grep $Q "No new software available."; then
+  logk
+else
+  echo
+  log "Installing software updates:"
+  if [ -z "$ZSH_DOTFILES_PREP_CI" ]; then
+    sudo_askpass softwareupdate --install --all
+    xcode_license
+    logk
+  else
+    echo "SKIPPED (for CI)"
+  fi
+fi
+
+
+# # Install from local Brewfile
+# if [ -f "$HOME/.Brewfile" ]; then
+#   log "Installing from user Brewfile on GitHub:"
+#   brew bundle check --global || brew bundle --global
+#   logk
+# fi
+
+## ------------------------------------------------------
+
+if [ -z "$PYENV_ROOT" ]; then
+  if [ -z "$HOME" ]; then
+    printf "$0: %s\n" \
+      "Either \$PYENV_ROOT or \$HOME must be set to determine the install location." \
+      >&2
+    exit 1
+  fi
+  export PYENV_ROOT="${HOME}/.pyenv"
+fi
+
+colorize() {
+  if [ -t 1 ]; then printf "\e[%sm%s\e[m" "$1" "$2"
+  else echo -n "$2"
+  fi
+}
+
+# Checks for `.pyenv` file, and suggests to remove it for installing
+if [ -d "${PYENV_ROOT}" ]; then
+  { echo
+    colorize 1 "WARNING"
+    echo ": Can not proceed with installation. Kindly remove the '${PYENV_ROOT}' directory first."
+    echo
+  } >&2
+    exit 1
+fi
+
+failed_checkout() {
+  echo "Failed to git clone $1"
+  exit -1
+}
+
+checkout() {
+  [ -d "$2" ] || git -c advice.detachedHead=0 clone --branch "$3" --depth 1 "$1" "$2" || failed_checkout "$1"
+}
+
+if ! command -v git 1>/dev/null 2>&1; then
+  echo "pyenv: Git is not installed, can't continue." >&2
+  exit 1
+fi
+
+# Check ssh authentication if USE_SSH is present
+if [ -n "${USE_SSH}" ]; then
+  if ! command -v ssh 1>/dev/null 2>&1; then
+    echo "pyenv: configuration USE_SSH found but ssh is not installed, can't continue." >&2
+    exit 1
+  fi
+
+  # `ssh -T git@github.com' returns 1 on success
+  # See https://docs.github.com/en/authentication/connecting-to-github-with-ssh/testing-your-ssh-connection
+  ssh -T git@github.com 1>/dev/null 2>&1 || EXIT_CODE=$?
+  if [[ ${EXIT_CODE} != 1 ]]; then
+      echo "pyenv: github ssh authentication failed."
+      echo
+      echo "In order to use the ssh connection option, you need to have an ssh key set up."
+      echo "Please generate an ssh key by using ssh-keygen, or follow the instructions at the following URL for more information:"
+      echo
+      echo "> https://docs.github.com/en/repositories/creating-and-managing-repositories/troubleshooting-cloning-errors#check-your-ssh-access"
+      echo
+      echo "Once you have an ssh key set up, try running the command again."
+    exit 1
+  fi
+fi
+
+if [ -n "${USE_SSH}" ]; then
+  GITHUB="git@github.com:"
+else
+  GITHUB="https://github.com/"
+fi
+
+checkout "${GITHUB}pyenv/pyenv.git"            "${PYENV_ROOT}"                           "${PYENV_GIT_TAG:-master}"
+checkout "${GITHUB}pyenv/pyenv-doctor.git"     "${PYENV_ROOT}/plugins/pyenv-doctor"      "master"
+checkout "${GITHUB}pyenv/pyenv-update.git"     "${PYENV_ROOT}/plugins/pyenv-update"      "master"
+checkout "${GITHUB}pyenv/pyenv-virtualenv.git" "${PYENV_ROOT}/plugins/pyenv-virtualenv"  "master"
+
+if ! command -v pyenv 1>/dev/null; then
+  { echo
+    colorize 1 "WARNING"
+    echo ": seems you still have not added 'pyenv' to the load path."
+    echo
+  } >&2
+
+  { # Without args, `init` commands print installation help
+    "${PYENV_ROOT}/bin/pyenv" init || true
+    "${PYENV_ROOT}/bin/pyenv" virtualenv-init || true
+  } >&2
+fi

@@ -1,0 +1,63 @@
+name: GitHub Actions CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  style:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set up Git repository
+        uses: actions/checkout@main
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@main
+        with:
+          bundler-cache: true
+
+      - name: Install shfmt
+        run: brew install shfmt
+
+      - run: contrib/style.sh
+
+  tests:
+    runs-on: macos-12
+    steps:
+      - name: Set up Git repository
+        uses: actions/checkout@main
+
+      - run: brew test-bot --only-cleanup-before
+
+      - name: Cleanup macOS
+        run: |
+          sudo rm -rf /usr/local/bin/brew /usr/local/.??* \
+                      /usr/local/Homebrew \
+                      /Applications/Xcode.app /usr/local/Caskroom \
+                      /Library/Developer/CommandLineTools
+
+      - name: Use newer Xcode
+        run: |
+          ls /Applications/Xcode*.app
+          sudo xcode-select --switch /Applications/Xcode_13.3.1.app/Contents/Developer
+
+      - run: bin/zsh-dotfiles-prereq-installer
+        env:
+          ZSH_DOTFILES_PREP_CI: 1
+          ZSH_DOTFILES_PREP_DEBUG: 1
+
+      - name: Rerun bin/zsh-dotfiles-prereq-installer
+        run: bin/zsh-dotfiles-prereq-installer
+        env:
+          ZSH_DOTFILES_PREP_CI: 1
+
+      - run: brew config
+
+      - run: brew doctor
+
+      - name: Install Ruby dependencies
+        run: brew install gmp openssl@1.1 libyaml
+
