@@ -8,6 +8,7 @@
 # TODO: https://github.com/atomantic/dotfiles/blob/main/install.sh#L38-L52
 # TODO: https://github.com/paulmillr/dotfiles/blob/master/home/.zlogin.sh#L5-L19
 # TODO: https://github.com/mathiasbynens/dotfiles/blob/main/.bash_profile#L42C1-L50
+# TODO: https://github.com/motty-mio2/dotfiles/blob/main/dot_zshrc.tmpl#L67-L79
 
 # Install homebrew
 # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -654,32 +655,37 @@ if [ "$CURRENT_OS" = "macos" ]; then
     fi
   fi
 
-  # Setup Brewfile
-  if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && { [ ! -f "$HOME/.Brewfile" ] || [ "$HOME/.Brewfile" -ef "$HOME/.homebrew-brewfile/Brewfile" ]; }; then
-    HOMEBREW_BREWFILE_URL="https://github.com/$ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile"
+  if [ "$ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE" = "1" ]
+  then
+    logn 'skipping brew bundle install ...'
+  else
+    # Setup Brewfile
+    if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && { [ ! -f "$HOME/.Brewfile" ] || [ "$HOME/.Brewfile" -ef "$HOME/.homebrew-brewfile/Brewfile" ]; }; then
+      HOMEBREW_BREWFILE_URL="https://github.com/$ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile"
 
-    if git ls-remote "$HOMEBREW_BREWFILE_URL" &>/dev/null; then
-      log "Fetching $ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile from GitHub:"
-      if [ ! -d "$HOME/.homebrew-brewfile" ]; then
-        log "Cloning to ~/.homebrew-brewfile:"
-        git clone "$HOMEBREW_BREWFILE_URL" ~/.homebrew-brewfile
+      if git ls-remote "$HOMEBREW_BREWFILE_URL" &>/dev/null; then
+        log "Fetching $ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile from GitHub:"
+        if [ ! -d "$HOME/.homebrew-brewfile" ]; then
+          log "Cloning to ~/.homebrew-brewfile:"
+          git clone "$HOMEBREW_BREWFILE_URL" ~/.homebrew-brewfile
+          logk
+        else
+          (
+            cd ~/.homebrew-brewfile
+            git pull
+          )
+        fi
+        ln -sf ~/.homebrew-brewfile/Brewfile ~/.Brewfile
         logk
-      else
-        (
-          cd ~/.homebrew-brewfile
-          git pull
-        )
       fi
-      ln -sf ~/.homebrew-brewfile/Brewfile ~/.Brewfile
+    fi
+
+    # Install from local Brewfile
+    if [ -f "$HOME/.Brewfile" ]; then
+      log "Installing from user Brewfile on GitHub:"
+      brew bundle check --global || brew bundle --global
       logk
     fi
-  fi
-
-  # Install from local Brewfile
-  if [ -f "$HOME/.Brewfile" ]; then
-    log "Installing from user Brewfile on GitHub:"
-    brew bundle check --global || brew bundle --global
-    logk
   fi
 
 fi
