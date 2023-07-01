@@ -970,15 +970,15 @@ logk
 # Brew python install
 # ---------------------------------------------------------
 install_global_python() {
-  brew_install_all python3 python-tk python@3.10 python-tk@3.10
-  pip install --upgrade "setuptools<60" wheel
-  python -m ensurepip --upgrade
-  pip install --upgrade pip 2>&1 | grep -v "DEPRECATION:"
+  brew_install_all python3 python-tk python@3.11 python-tk@3.11
+  python3 -m ensurepip --upgrade
+  pip3 install --upgrade "setuptools<60" wheel
+  pip3 install --upgrade pip 2>&1 | grep -v "DEPRECATION:"
   # pip install --upgrade pipx 2>&1 | grep -v "DEPRECATION:"
   # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
 
 }
-# install_global_python
+install_global_python
 
 
 # ---------------------------------------------------------
