@@ -622,10 +622,10 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # SOURCE: https://github.com/bitflight-devops/shell-scripts/blob/27bff97ed9106c7c21f70d397887bbf514eb80e4/mac_development_computer_setup/tools_to_help_on_osx_development_computer.md
   # Fix permissions for Homebrew
   logn 'Fix permissions for Homebrew'
-  sudo_askpass zsh -c "autoload -Uz compinstall; compinstall; autoload -Uz compinit;compinit; $(declare -f compaudit);compaudit | xargs chown -R \"$(whoami)\""
+  sudo_askpass zsh -c "autoload -Uz compinstall; compinstall; autoload -Uz compinit;compinit; $(declare -f compaudit);compaudit | xargs chown -R \"$(whoami)\"" || true
   logn 'Fix permissions on all files in /usr/local'
   # Fix permissions on all files in /usr/local
-  sudo_askpass zsh -c "autoload -Uz compinstall; compinstall; autoload -Uz compinit;compinit; $(declare -f compaudit);compaudit | xargs chmod go-w"
+  sudo_askpass zsh -c "autoload -Uz compinstall; compinstall; autoload -Uz compinit;compinit; $(declare -f compaudit);compaudit | xargs chmod go-w" || true
   logk
   # -----------------------------------------------------------------
 
