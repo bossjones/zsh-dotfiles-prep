@@ -701,7 +701,7 @@ add_helper_functions_to_bashrc() {
   local this_script='$HOME/compat.bash'
 
   # Add helper functions to profile
-  local source_line="[ -f \"${this_script}\" ] && eval (\"${this_script}\")"
+  local source_line="[ -f \"${this_script}\" ] && source \"${this_script}\""
   if ! grep -q "${this_script}" ~/.bashrc; then
     echo "Adding helper functions to ~/.bashrc"
     echo "${source_line}" >>~/.bashrc
@@ -713,7 +713,7 @@ add_helper_functions_to_profile() {
   local this_script='$HOME/compat.sh'
 
   # Add helper functions to profile
-  local source_line="[ -f \"${this_script}\" ] && eval (\"${this_script}\")"
+  local source_line="[ -f \"${this_script}\" ] && source \"${this_script}\""
   touch ~/.profile || true
   if ! grep -q "${this_script}" ~/.profile; then
     echo "Adding helper functions to ~/.profile"
