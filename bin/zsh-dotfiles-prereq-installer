@@ -66,6 +66,15 @@ fi
 STDIN_FILE_DESCRIPTOR="0"
 [ -t "$STDIN_FILE_DESCRIPTOR" ] && ZSH_DOTFILES_PREP_INTERACTIVE="1"
 
+# Set by web/app.rb
+# ZSH_DOTFILES_PREP_GIT_NAME=
+# ZSH_DOTFILES_PREP_GIT_EMAIL=
+# ZSH_DOTFILES_PREP_GITHUB_USER=
+# ZSH_DOTFILES_PREP_GITHUB_TOKEN=
+# CUSTOM_HOMEBREW_TAP=
+# CUSTOM_BREW_COMMAND=
+ZSH_DOTFILES_PREP_ISSUES_URL='https://github.com/bossjones/zsh-dotfiles-prep/issues/new'
+
 # We want to always prompt for sudo password at least once rather than doing
 # root stuff unexpectedly.
 sudo --reset-timestamp
@@ -188,6 +197,37 @@ run_dotfile_scripts() {
   fi
 }
 
+# SOURCE: https://rtx.pub/install.sh
+
+#region environment setup
+get_os() {
+	os="$(uname -s)"
+	if [ "$os" = Darwin ]; then
+		echo "macos"
+	elif [ "$os" = Linux ]; then
+		echo "linux"
+	else
+		error "unsupported OS: $os"
+	fi
+}
+
+get_arch() {
+	arch="$(uname -m)"
+	if [ "$arch" = x86_64 ]; then
+		echo "x64"
+	elif [ "$arch" = aarch64 ] || [ "$arch" = arm64 ]; then
+		echo "arm64"
+	else
+		error "unsupported architecture: $arch"
+	fi
+}
+
+get_system() {
+    os="$(get_os)"
+    arch="$(get_arch)"
+}
+# SOURCE: https://rtx.pub/install.sh
+
 [ "$USER" = "root" ] && abort "Run zsh-dotfiles-prereq-installer as yourself, not root."
 which grep
 groups | \grep -E "\b(admin)\b" || abort "Add $USER to the admin group."
@@ -198,13 +238,13 @@ caffeinate -s -w $$ &
 # Check and, if necessary, enable sudo authentication using TouchID.
 # Don't care about non-alphanumeric filenames when doing a specific match
 # shellcheck disable=SC2010
-if ls /usr/lib/pam | grep "$Q" "pam_tid.so"; then
+if ls /usr/lib/pam | grep "" "pam_tid.so"; then
   logn "Configuring sudo authentication using TouchID:"
   PAM_FILE="/etc/pam.d/sudo"
   FIRST_LINE="# sudo: auth account password session"
-  if grep "$Q" pam_tid.so "$PAM_FILE"; then
+  if grep "" pam_tid.so "$PAM_FILE"; then
     logk
-  elif ! head -n1 "$PAM_FILE" | grep "$Q" "$FIRST_LINE"; then
+  elif ! head -n1 "$PAM_FILE" | grep "" "$FIRST_LINE"; then
     logskip "$PAM_FILE is not in the expected format!"
   else
     TOUCHID_LINE="auth       sufficient     pam_tid.so"
@@ -240,7 +280,7 @@ logn "Configuring security settings:"
 
 # # Check and enable full-disk encryption.
 # logn "Checking full-disk encryption status:"
-# if fdesetup status | grep $Q -E "FileVault is (On|Off, but will be enabled after the next restart)."; then
+# if fdesetup status | grep  -E "FileVault is (On|Off, but will be enabled after the next restart)."; then
 #   logk
 # elif [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
 #   echo "SKIPPED (for CI)"
@@ -284,7 +324,7 @@ fi
 
 # Check if the Xcode license is agreed to and agree if not.
 xcode_license() {
-  if /usr/bin/xcrun clang 2>&1 | grep "$Q" license; then
+  if /usr/bin/xcrun clang 2>&1 | grep "" license; then
     if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
       logn "Asking for Xcode license confirmation:"
       sudo_askpass xcodebuild -license
@@ -294,7 +334,11 @@ xcode_license() {
     fi
   fi
 }
-xcode_license
+if [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
+  echo "SKIPPED (for CI)"
+else
+  xcode_license
+fi
 
 # Setup Git configuration.
 logn "Configuring Git:"
@@ -316,10 +360,10 @@ if ! git config push.default >/dev/null; then
 fi
 
 # # Setup GitHub HTTPS credentials.
-# if git credential-osxkeychain 2>&1 | grep $Q "git.credential-osxkeychain"; then
+# if git credential-osxkeychain 2>&1 | grep  "git.credential-osxkeychain"; then
 #   # Actually execute the credential in case it's a wrapper script for credential-osxkeychain
 #   if git "credential-$(git config --global credential.helper 2>/dev/null)" 2>&1 |
-#     grep -v $Q "git.credential-osxkeychain"; then
+#     grep -v  "git.credential-osxkeychain"; then
 #     git config --global credential.helper osxkeychain
 #   fi
 
@@ -365,11 +409,11 @@ fi
 
 # Download Homebrew.
 export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
-git init $Q
+git init
 git config remote.origin.url "https://github.com/Homebrew/brew"
 git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-git fetch $Q --tags --force
-git reset $Q --hard origin/master
+git fetch  --tags --force
+git reset  --hard origin/master
 unset GIT_DIR GIT_WORK_TREE
 logk
 
@@ -416,11 +460,11 @@ logk
 
 # # Download Homebrew.
 # export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
-# git init $Q
+# git init
 # git config remote.origin.url "https://github.com/Homebrew/brew"
 # git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-# git fetch $Q --tags --force
-# git reset $Q --hard origin/master
+# git fetch  --tags --force
+# git reset  --hard origin/master
 # unset GIT_DIR GIT_WORK_TREE
 # logk
 
@@ -432,7 +476,7 @@ logk
 
 # Check and install any remaining software updates.
 logn "Checking for software updates:"
-if softwareupdate -l 2>&1 | grep "$Q" "No new software available."; then
+if softwareupdate -l 2>&1 | grep "" "No new software available."; then
   logk
 else
   echo
