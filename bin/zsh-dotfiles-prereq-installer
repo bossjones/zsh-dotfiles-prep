@@ -36,6 +36,8 @@ COL_MAGENTA=$ESC_SEQ"35;01m"
 COL_CYAN=$ESC_SEQ"36;01m"
 
 set -e
+# https://www.gnu.org/software/bash/manual/html_node/Bash-POSIX-Mode.html#Bash-POSIX-Mode
+# set -o posix
 # [ -n "$ZSH_DOTFILES_PREP_DEBUG" ] && set -x
 
 [[ $1 == "--debug" || -o xtrace ]] && ZSH_DOTFILES_PREP_DEBUG="1"
@@ -345,6 +347,9 @@ is_file_or_folder() {
   # fi
 }
 
+# https://github.com/bitflight-devops/shell-scripts/blob/main/install.sh
+command_exists() { command -v "$@" >/dev/null 2>&1; }
+
 # create_backup_list() {
 #   # Define a list of string variable
 #   # shellcheck disable=SC2088  # Tilde does not expand in quotes
@@ -394,6 +399,14 @@ take_backup() {
   # shellcheck disable=SC2046  # Quote this to prevent word splitting
   /usr/local/opt/gnu-tar/libexec/gnubin/tar --create --gzip --dereference --file=${HOME}/backups/"${ts}"_zsh_dotfiles.tgz $(echo "${arr[@]}")
 
+}
+
+reshim() {
+  # SOURCE: https://github.com/bitflight-devops/shell-scripts/blob/27bff97ed9106c7c21f70d397887bbf514eb80e4/mac_development_computer_setup/helper_functions.sh
+  # Reshim ASDF if it is installed
+  if command_exists asdf; then
+    asdf reshim
+  fi
 }
 
 [ "$USER" = "root" ] && abort "Run zsh-dotfiles-prereq-installer as yourself, not root."
@@ -599,6 +612,17 @@ if [ "$CURRENT_OS" = "macos" ]; then
   brew update --quiet
   logk
 
+  # -----------------------------------------------------------------
+  # SOURCE: https://github.com/bitflight-devops/shell-scripts/blob/27bff97ed9106c7c21f70d397887bbf514eb80e4/mac_development_computer_setup/tools_to_help_on_osx_development_computer.md
+  # Fix permissions for Homebrew
+  logn 'Fix permissions for Homebrew'
+  sudo_askpass zsh -c "$(declare -f compaudit);compaudit | xargs chown -R \"$(whoami)\""
+  logn 'Fix permissions on all files in /usr/local'
+  # Fix permissions on all files in /usr/local
+  sudo_askpass zsh -c "$(declare -f compaudit);compaudit | xargs chmod go-w"
+  logk
+  # -----------------------------------------------------------------
+
   logn '(brew) Installing openssl readline sqlite3 xz zlib tcl-tk'
   brew install openssl readline sqlite3 xz zlib tcl-tk
   logk
@@ -653,6 +677,283 @@ mkdir -pv ~/bin || true
 mkdir -pv ~/.bin || true
 mkdir -pv ~/.local/bin || true
 mkdir -pv ~/.local/src || true
+
+add_helper_functions_to_bashrc() {
+  # shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double quotes for that.
+  local this_script='$HOME/compat.bash'
+
+  # Add helper functions to profile
+  local source_line="[ -f \"${this_script}\" ] && eval (<\"${this_script}\")"
+  if ! grep -q "${this_script}" ~/.bashrc; then
+    echo "Adding helper functions to ~/.bashrc"
+    echo "${source_line}" >>~/.bashrc
+  fi
+}
+
+add_helper_functions_to_profile() {
+  # shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double quotes for that.
+  local this_script='$HOME/compat.sh'
+
+  # Add helper functions to profile
+  local source_line="[ -f \"${this_script}\" ] && eval (<\"${this_script}\")"
+  if ! grep -q "${this_script}" ~/.profile; then
+    echo "Adding helper functions to ~/.profile"
+    echo "${source_line}" >>~/.profile
+  fi
+}
+
+add_helper_functions_to_shells() {
+  add_helper_functions_to_bashrc
+  add_helper_functions_to_profile
+}
+
+# ---------------------------------------------------------
+# Setup compat files which will be used in .profile .bashrc .zshrc etc
+# ---------------------------------------------------------
+# mac version
+
+if [ "$CURRENT_OS" = "macos" ]; then
+  cat <<'EOF' >~/compat.bash
+  # ---------------------------------------------------------
+  # chezmoi managed - ~/.bashrc
+  # ---------------------------------------------------------
+  # homebrew var setup
+  UNAME_MACHINE="$(/usr/bin/uname -m)"
+  if [[ $UNAME_MACHINE == "arm64" ]]; then
+    HOMEBREW_PREFIX="/opt/homebrew"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+  else
+    HOMEBREW_PREFIX="/usr/local"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+  fi
+
+
+  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+  export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
+  # export PATH="/usr/local/cuda/bin:${PATH}"
+  # export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
+  # export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+
+  [ -f ~/.fzf.bash ] && . ~/.fzf.bash
+
+  . "$HOME/.cargo/env"
+
+
+  ######################################################################################
+  # pyenv
+  ######################################################################################
+  export PYENV_ROOT=~/.pyenv
+  export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
+  local OPT_HOMEBREW="${HOMEBREW_PREFIX}"
+  if [ -s "$OPT_HOMEBREW"/bin/brew ]; then
+      eval "$($OPT_HOMEBREW/bin/brew shellenv)"
+  fi
+
+  if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
+    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
+    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
+    fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
+    pyenv virtualenvwrapper_lazy
+
+  elif [ -s "$HOME/.pyenv/bin/pyenv" ]; then
+    export PYENV_ROOT=~/.pyenv
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$($HOME/.pyenv/bin/pyenv init --path)"
+    eval "$($HOME/.pyenv/bin/pyenv init -)"
+    # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
+  fi
+  ######################################################################################
+
+  OS="`uname`"
+  case $OS in
+    'Linux')
+      OS='Linux'
+      ;;
+    'FreeBSD')
+      OS='FreeBSD'
+      ;;
+    'WindowsNT')
+      OS='Windows'
+      ;;
+    'Darwin')
+      OS='Mac'
+      ;;
+    'SunOS')
+      OS='Solaris'
+      ;;
+    *) ;;
+  esac
+
+  if [ "$OS" = 'Linux' ]
+  then
+      export ASDF_DIR="${HOME}/.asdf"
+      . "$HOME/.asdf/asdf.sh"
+      . "$HOME/.asdf/lib/asdf.sh"
+      . "$HOME/.asdf/completions/asdf.bash"
+  fi
+
+  # fnm
+  export PATH="$HOME/.local/share/fnm:$PATH"
+  eval "`fnm env`"
+EOF
+
+  cat <<'EOF' >~/compat.sh
+  # ---------------------------------------------------------
+  # chezmoi managed - ~/.bashrc
+  # ---------------------------------------------------------
+  # homebrew var setup
+  UNAME_MACHINE="$(/usr/bin/uname -m)"
+  if [ "$UNAME_MACHINE" = "arm64" ]
+  then
+    HOMEBREW_PREFIX="/opt/homebrew"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+  else
+    HOMEBREW_PREFIX="/usr/local"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+  fi
+
+
+  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+  export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
+  # export PATH="/usr/local/cuda/bin:${PATH}"
+  # export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
+  # export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+
+  if [ -f "$HOME/.fzf.bash" ]
+  then
+    source ~/.fzf.bash
+  fi
+
+  if [ -f "$HOME/.cargo/env" ]
+  then
+    source ~/.fzf.bash
+  fi
+
+
+  ######################################################################################
+  # pyenv
+  ######################################################################################
+  export PYENV_ROOT=~/.pyenv
+  export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
+  local OPT_HOMEBREW="${HOMEBREW_PREFIX}"
+  if [ -s "$OPT_HOMEBREW"/bin/brew ]
+  then
+      eval "$($OPT_HOMEBREW/bin/brew shellenv)"
+  fi
+
+  if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
+    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
+    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
+    fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
+    pyenv virtualenvwrapper_lazy
+
+  elif [ -s "$HOME/.pyenv/bin/pyenv" ]
+  then
+    export PYENV_ROOT=~/.pyenv
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$($HOME/.pyenv/bin/pyenv init --path)"
+    eval "$($HOME/.pyenv/bin/pyenv init -)"
+    # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
+  fi
+  ######################################################################################
+
+  OS="`uname`"
+  case $OS in
+    'Linux')
+      OS='Linux'
+      ;;
+    'FreeBSD')
+      OS='FreeBSD'
+      ;;
+    'WindowsNT')
+      OS='Windows'
+      ;;
+    'Darwin')
+      OS='Mac'
+      ;;
+    'SunOS')
+      OS='Solaris'
+      ;;
+    *) ;;
+  esac
+
+  if [ "$OS" = 'Linux' ]
+  then
+      export ASDF_DIR="${HOME}/.asdf"
+      . "$HOME/.asdf/asdf.sh"
+      . "$HOME/.asdf/lib/asdf.sh"
+      . "$HOME/.asdf/completions/asdf.bash"
+  fi
+
+  # fnm
+  export PATH="$HOME/.local/share/fnm:$PATH"
+  eval "`fnm env`"
+EOF
+
+  add_helper_functions_to_shells
+
+  # shellcheck source=/dev/null
+  source "${HOME}/compat.bash"
+
+fi
+
+# ---------------------------------------------------------
+# chezmoi managed - end
+# ---------------------------------------------------------
+
+# ---------------------------------------------------------
+# Brew asdf setup
+# ---------------------------------------------------------
+# echo -e "\n. $(brew --prefix asdf)/libexec/asdf.sh" >> ~/.zshrc
+
+#  SC1091: Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+# shellcheck source=/dev/null
+# shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+# shellcheck disable=SC2046  # Quote this to prevent word splitting.
+. $(brew --prefix asdf)/libexec/asdf.sh
+asdf current
+
+# ---------------------------------------------------------
+# Brew fzf setup
+# ---------------------------------------------------------
+# shellcheck source=/dev/null
+# shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+# shellcheck disable=SC2046  # Quote this to prevent word splitting.
+$(brew --prefix)/opt/fzf/install --all
+ls -lta ~/.fzf.bash
+ls -lta ~/.fzf.zsh
+
+# ---------------------------------------------------------
+# Brew python install
+# ---------------------------------------------------------
+install_global_python() {
+  brew_install_all python3 python-tk python@3.10 python-tk@3.10
+  pip install --upgrade "setuptools<60" wheel
+  python -m ensurepip --upgrade
+  pip install --upgrade pip 2>&1 | grep -v "DEPRECATION:"
+  # pip install --upgrade pipx 2>&1 | grep -v "DEPRECATION:"
+  # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
+
+}
+# install_global_python
+
+# ---------------------------------------------------------
+# Install cargo, volta
+# ---------------------------------------------------------
+# SOURCE: https://github.com/radiol/dotfiles/blob/610fc7898d47252cd7eaf41662e5558d7eac645f/run_once_install.sh.tmpl#L140
+# Install Rust
+if ! (type "cargo" >/dev/null 2>&1); then
+  curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
+  sh rustup.sh -y -q --no-modify-path && rm rustup.sh
+  # shellcheck source=/dev/null
+  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
+  source "$HOME/.cargo/env"
+  # Install Rust Apps
+  cargo install -q cargo-update
+fi
 
 ## ------------------------------------------------------
 
