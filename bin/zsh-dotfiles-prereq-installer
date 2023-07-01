@@ -188,8 +188,9 @@ run_dotfile_scripts() {
   fi
 }
 
-[ "$USER" = "root" ] && abort "Run Strap as yourself, not root."
-groups | grep "$Q" -E "\b(admin)\b" || abort "Add $USER to the admin group."
+[ "$USER" = "root" ] && abort "Run zsh-dotfiles-prereq-installer as yourself, not root."
+echo $(which grep)
+groups | \grep "$Q" -E "\b(admin)\b" || abort "Add $USER to the admin group."
 
 # Prevent sleeping during script execution, as long as the machine is on AC power
 caffeinate -s -w $$ &
