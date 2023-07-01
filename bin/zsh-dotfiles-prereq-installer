@@ -744,6 +744,20 @@ if ! (type "cargo" >/dev/null 2>&1); then
   logk
 fi
 
+logn "asdf update dir ~/.asdf"
+if [ ! -d "$HOME/.asdf" ]; then
+  log "Cloning to ~/.asdf:"
+  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.12.0
+  logk
+else
+  (
+    cd ~/.asdf
+    git pull
+  )
+fi
+logk
+
+
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
 # ---------------------------------------------------------
