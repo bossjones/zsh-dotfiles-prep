@@ -61,6 +61,7 @@ if [ -n "$ZSH_DOTFILES_PREP_DEBUG" ]; then
 else
   ZSH_DOTFILES_PREP_QUIET_FLAG="-q"
   Q="$ZSH_DOTFILES_PREP_QUIET_FLAG"
+  echo "${Q}"
 fi
 
 STDIN_FILE_DESCRIPTOR="0"
@@ -201,30 +202,30 @@ run_dotfile_scripts() {
 
 #region environment setup
 get_os() {
-	os="$(uname -s)"
-	if [ "$os" = Darwin ]; then
-		echo "macos"
-	elif [ "$os" = Linux ]; then
-		echo "linux"
-	else
-		error "unsupported OS: $os"
-	fi
+  os="$(uname -s)"
+  if [ "$os" = Darwin ]; then
+    echo "macos"
+  elif [ "$os" = Linux ]; then
+    echo "linux"
+  else
+    error "unsupported OS: $os"
+  fi
 }
 
 get_arch() {
-	arch="$(uname -m)"
-	if [ "$arch" = x86_64 ]; then
-		echo "x64"
-	elif [ "$arch" = aarch64 ] || [ "$arch" = arm64 ]; then
-		echo "arm64"
-	else
-		error "unsupported architecture: $arch"
-	fi
+  arch="$(uname -m)"
+  if [ "$arch" = x86_64 ]; then
+    echo "x64"
+  elif [ "$arch" = aarch64 ] || [ "$arch" = arm64 ]; then
+    echo "arm64"
+  else
+    error "unsupported architecture: $arch"
+  fi
 }
 
 get_system() {
-    os="$(get_os)"
-    arch="$(get_arch)"
+  os="$(get_os)"
+  arch="$(get_arch)"
 }
 # SOURCE: https://rtx.pub/install.sh
 
@@ -412,8 +413,8 @@ export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
 git init
 git config remote.origin.url "https://github.com/Homebrew/brew"
 git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-git fetch  --tags --force
-git reset  --hard origin/master
+git fetch --tags --force
+git reset --hard origin/master
 unset GIT_DIR GIT_WORK_TREE
 logk
 
