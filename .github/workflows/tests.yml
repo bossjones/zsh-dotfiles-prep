@@ -50,6 +50,16 @@ jobs:
         env:
           ZSH_DOTFILES_PREP_CI: 1
 
+      # - name: Set up Homebrew PATH
+      #   if: runner.os != 'windows'
+      #   run: |
+      #     if [[ "${{ runner.os }}" = "macOS" ]]
+      #     then
+      #       echo "/usr/local/bin:/usr/bin:/bin" >> "${GITHUB_PATH}"
+      #     else
+      #       echo "/home/linuxbrew/.linuxbrew/bin:/usr/bin:/bin" >> "${GITHUB_PATH}"
+      #     fi
+
       - run: brew config
 
       - run: brew doctor
