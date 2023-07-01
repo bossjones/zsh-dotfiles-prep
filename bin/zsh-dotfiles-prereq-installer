@@ -714,6 +714,7 @@ add_helper_functions_to_profile() {
 
   # Add helper functions to profile
   local source_line="[ -f \"${this_script}\" ] && eval (<\"${this_script}\")"
+  touch ~/.profile || true
   if ! grep -q "${this_script}" ~/.profile; then
     echo "Adding helper functions to ~/.profile"
     echo "${source_line}" >>~/.profile
@@ -724,6 +725,24 @@ add_helper_functions_to_shells() {
   add_helper_functions_to_bashrc
   add_helper_functions_to_profile
 }
+
+
+# ---------------------------------------------------------
+# Install cargo, volta
+# ---------------------------------------------------------
+# SOURCE: https://github.com/radiol/dotfiles/blob/610fc7898d47252cd7eaf41662e5558d7eac645f/run_once_install.sh.tmpl#L140
+# Install Rust
+if ! (type "cargo" >/dev/null 2>&1); then
+  curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
+  sh rustup.sh -y -q --no-modify-path && rm rustup.sh
+  # shellcheck source=/dev/null
+  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
+  source "$HOME/.cargo/env"
+  # Install Rust Apps
+  # cargo install -q cargo-update
+  logk
+fi
 
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
@@ -961,22 +980,6 @@ install_global_python() {
 }
 # install_global_python
 
-# ---------------------------------------------------------
-# Install cargo, volta
-# ---------------------------------------------------------
-# SOURCE: https://github.com/radiol/dotfiles/blob/610fc7898d47252cd7eaf41662e5558d7eac645f/run_once_install.sh.tmpl#L140
-# Install Rust
-if ! (type "cargo" >/dev/null 2>&1); then
-  curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
-  sh rustup.sh -y -q --no-modify-path && rm rustup.sh
-  # shellcheck source=/dev/null
-  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
-  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
-  source "$HOME/.cargo/env"
-  # Install Rust Apps
-  # cargo install -q cargo-update
-  logk
-fi
 
 # ---------------------------------------------------------
 # Chezmoi
