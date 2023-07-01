@@ -257,7 +257,6 @@ run_dotfile_scripts() {
 }
 
 # SOURCE: https://rtx.pub/install.sh
-
 #region environment setup
 get_os() {
   os="$(uname -s)"
@@ -270,6 +269,7 @@ get_os() {
   fi
 }
 
+# SOURCE: https://rtx.pub/install.sh
 get_arch() {
   arch="$(uname -m)"
   if [ "$arch" = x86_64 ]; then
@@ -281,11 +281,120 @@ get_arch() {
   fi
 }
 
+CURRENT_OS="$(get_os)"
+# shellcheck disable=SC2034  # Unused variables left for readability
+CURRENT_ARCH="$(get_arch)"
+
 get_system() {
   os="$(get_os)"
   arch="$(get_arch)"
 }
 # SOURCE: https://rtx.pub/install.sh
+
+# [ -e filepath ] Returns true if file exists.
+# [ -x filepath ] Returns true if file exists and executable.
+# [ -S filepath ] Returns true if file exists and its a socket file.
+# [ expr1 -a expr2 ] Returns true if both the expression is true.
+# [ expr1 -o expr2 ] Returns true if either of the expression1 or 2 is true.
+# From the man bash pages (especially the CONDITIONAL EXPRESSIONS section):
+# -a file
+#         True if file exists.
+#  -b file
+#         True if file exists and is a block special file.
+#  -c file
+#         True if file exists and is a character special file.
+#  -d file
+#         True if file exists and is a directory.
+#  -e file
+#         True if file exists.
+#  -f file
+#         True if file exists and is a regular file.
+#  -g file
+#         True if file exists and is set-group-id.
+#  -h file
+#         True if file exists and is a symbolic link.
+#  -k file
+#         True if file exists and its ``sticky'' bit is set.
+#  -p file
+#         True if file exists and is a named pipe (FIFO).
+#  -r file
+#         True if file exists and is readable.
+#  -s file
+#         True if file exists and has a size greater than zero.
+#  -t fd  True if file descriptor fd is open and refers to a terminal.
+#  -u file
+#         True if file exists and its set-user-id bit is set.
+#  -w file
+#         True if file exists and is writable.
+#  -x file
+#         True if file exists and is executable.
+
+is_file_or_folder() {
+  # if [ -d ~/.dotfiles ]; then
+  (
+    # logn "does this exists: $1"
+    # for i in "$@"; do
+    # if is regular file, or symbolic link, or directory
+    if [ -f "$1" ] || [ -h "$1" ] || [ -d "$1" ]; then
+      echo "${1}"
+    else
+      echo ""
+    fi
+    # done
+  )
+  # fi
+}
+
+# create_backup_list() {
+#   # Define a list of string variable
+#   # shellcheck disable=SC2088  # Tilde does not expand in quotes
+#   to_check_for="~/.asdf,~/bin,~/.bin,~/.local,~/.pyenv,~/.config/gh,~/.config/lvim,~/.config/sourcery,~/.config/cheat,~/.zshrc.local,~/.zshrc,~/.zprofile,~/.zshenv,~/.zsh.d,~/.profile,~/.bash_profile"
+
+#   # Use comma as separator and apply as pattern
+#   for val in ${to_check_for//,/ }
+#   do
+#     echo -e "${val}"
+#   done
+# }
+
+# Backup .zsh* .profile .bash*, configs for certain apps like:
+#
+
+# > ~/.config
+# bpytop  configstore   fontconfig  gh    iterm2   lvim      op         sourcery
+# cheat   ffmpeg-tools  gallery-dl  htop  litecli  neofetch  powerline  wandb
+
+# backup ~/.asdf
+# backup ~/bin
+# backup ~/.bin
+# backup ~/.local/bin
+# backup ~/.pyenv
+
+take_backup() {
+  # Define a list of string variable
+  # shellcheck disable=SC2088  # Tilde does not expand in quotes
+  # to_check_for="~/.asdf,~/bin,~/.bin,~/.local,~/.pyenv,~/.config/gh,~/.config/lvim,~/.config/sourcery,~/.config/cheat,~/.zshrc.local,~/.zshrc,~/.zprofile,~/.zshenv,~/.zsh.d,~/.profile"
+
+  echo "Creating backups folder ~/backups"
+  mkdir -pv ~/backups || true >/dev/null
+
+  echo "Check For existence of file/folder"
+
+  # shellcheck disable=SC2088  # Tilde does not expand in quotes
+  arr=(~/.bashrc ~/.bash_profile ~/.zshrc.local ~/.zshrc ~/.zprofile ~/.zshenv ~/.zsh.d ~/.profile ~/.config)
+
+  echo "${arr[@]}"
+
+  echo "Backing up the following files/folders:"
+
+  ts=$(date +"%Y%m%d_%H%M%S")
+
+  # shellcheck disable=SC2086  # Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2116  # Useless echo?
+  # shellcheck disable=SC2046  # Quote this to prevent word splitting
+  /usr/local/opt/gnu-tar/libexec/gnubin/tar --create --gzip --dereference --file=${HOME}/backups/"${ts}"_zsh_dotfiles.tgz $(echo "${arr[@]}")
+
+}
 
 [ "$USER" = "root" ] && abort "Run zsh-dotfiles-prereq-installer as yourself, not root."
 which grep
@@ -354,31 +463,35 @@ logn "Configuring security settings:"
 #   abort "Run 'sudo fdesetup enable -user \"$USER\"' to enable full-disk encryption."
 # fi
 
-# Install the Xcode Command Line Tools.
-if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
-  log "Installing the Xcode Command Line Tools:"
-  CLT_PLACEHOLDER="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
-  sudo_askpass touch "$CLT_PLACEHOLDER"
+if [ "$CURRENT_OS" = "macos" ]; then
 
-  CLT_PACKAGE=$(softwareupdate -l |
-    grep -B 1 "Command Line Tools" |
-    awk -F"*" '/^ *\*/ {print $2}' |
-    sed -e 's/^ *Label: //' -e 's/^ *//' |
-    sort -V |
-    tail -n1)
-  sudo_askpass softwareupdate -i "$CLT_PACKAGE"
-  sudo_askpass rm -f "$CLT_PLACEHOLDER"
+  # Install the Xcode Command Line Tools.
   if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
-    if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
-      echo
-      logn "Requesting user install of Xcode Command Line Tools:"
-      xcode-select --install
-    else
-      echo
-      abort "Run 'xcode-select --install' to install the Xcode Command Line Tools."
+    log "Installing the Xcode Command Line Tools:"
+    CLT_PLACEHOLDER="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
+    sudo_askpass touch "$CLT_PLACEHOLDER"
+
+    CLT_PACKAGE=$(softwareupdate -l |
+      grep -B 1 "Command Line Tools" |
+      awk -F"*" '/^ *\*/ {print $2}' |
+      sed -e 's/^ *Label: //' -e 's/^ *//' |
+      sort -V |
+      tail -n1)
+    sudo_askpass softwareupdate -i "$CLT_PACKAGE"
+    sudo_askpass rm -f "$CLT_PLACEHOLDER"
+    if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
+      if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+        echo
+        logn "Requesting user install of Xcode Command Line Tools:"
+        xcode-select --install
+      else
+        echo
+        abort "Run 'xcode-select --install' to install the Xcode Command Line Tools."
+      fi
     fi
+    logk
   fi
-  logk
+
 fi
 
 # Check if the Xcode license is agreed to and agree if not.
@@ -393,10 +506,13 @@ xcode_license() {
     fi
   fi
 }
-if [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
-  echo "SKIPPED (for CI)"
-else
-  xcode_license
+
+if [ "$CURRENT_OS" = "macos" ]; then
+  if [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
+    echo "SKIPPED (for CI)"
+  else
+    xcode_license
+  fi
 fi
 
 # Setup Git configuration.
@@ -435,147 +551,108 @@ fi
 # fi
 logk
 
-# Setup Homebrew directory and permissions.
-logn "Installing Homebrew:"
-HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
-HOMEBREW_REPOSITORY="$(brew --repository 2>/dev/null || true)"
-if [ -z "$HOMEBREW_PREFIX" ] || [ -z "$HOMEBREW_REPOSITORY" ]; then
-  UNAME_MACHINE="$(/usr/bin/uname -m)"
-  if [[ $UNAME_MACHINE == "arm64" ]]; then
-    HOMEBREW_PREFIX="/opt/homebrew"
-    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
-  else
-    HOMEBREW_PREFIX="/usr/local"
-    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+if [ "$CURRENT_OS" = "macos" ]; then
+  # Setup Homebrew directory and permissions.
+  logn "Installing Homebrew:"
+  HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
+  HOMEBREW_REPOSITORY="$(brew --repository 2>/dev/null || true)"
+  if [ -z "$HOMEBREW_PREFIX" ] || [ -z "$HOMEBREW_REPOSITORY" ]; then
+    UNAME_MACHINE="$(/usr/bin/uname -m)"
+    if [[ $UNAME_MACHINE == "arm64" ]]; then
+      HOMEBREW_PREFIX="/opt/homebrew"
+      HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+    else
+      HOMEBREW_PREFIX="/usr/local"
+      HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+    fi
   fi
-fi
-[ -d "$HOMEBREW_PREFIX" ] || sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
-if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
-  sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
-fi
-(
-  cd "$HOMEBREW_PREFIX"
-  sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
-  sudo_askpass chown "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var
-)
+  [ -d "$HOMEBREW_PREFIX" ] || sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
+  if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
+    sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
+  fi
+  (
+    cd "$HOMEBREW_PREFIX"
+    sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+    sudo_askpass chown "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+  )
 
-[ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
-sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
+  [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
+  sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
 
-if [ $HOMEBREW_PREFIX != $HOMEBREW_REPOSITORY ]; then
-  ln -sf "$HOMEBREW_REPOSITORY/bin/brew" "$HOMEBREW_PREFIX/bin/brew"
-fi
+  if [ $HOMEBREW_PREFIX != $HOMEBREW_REPOSITORY ]; then
+    ln -sf "$HOMEBREW_REPOSITORY/bin/brew" "$HOMEBREW_PREFIX/bin/brew"
+  fi
 
-# Download Homebrew.
-export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
-git init
-git config remote.origin.url "https://github.com/Homebrew/brew"
-git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-git fetch --tags --force
-git reset --hard origin/master
-unset GIT_DIR GIT_WORK_TREE
-logk
-
-# Update Homebrew.
-export PATH="$HOMEBREW_PREFIX/bin:$PATH"
-logn "Updating Homebrew:"
-brew update --quiet
-logk
-
-# # Setup Homebrew directory and permissions.
-# logn "Installing Homebrew:"
-# HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
-# HOMEBREW_REPOSITORY="$(brew --repository 2>/dev/null || true)"
-# if [ -z "$HOMEBREW_PREFIX" ] || [ -z "$HOMEBREW_REPOSITORY" ]; then
-#   UNAME_MACHINE="$(/usr/bin/uname -m)"
-#   if [[ $UNAME_MACHINE == "arm64" ]]; then
-#     HOMEBREW_PREFIX="/opt/homebrew"
-#     HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
-#   else
-#     HOMEBREW_PREFIX="/usr/local"
-#     HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
-#   fi
-# fi
-
-# logn "if homebrew doesn't exist, install it. "
-# [ -d "$HOMEBREW_REPOSITORY" ] || NONINTERACTIVE=1 /bin/bash -xc "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
-# if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
-#   sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
-# fi
-# (
-#   cd "$HOMEBREW_PREFIX"
-#   sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
-#   sudo_askpass chown "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var
-# )
-
-# [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
-# sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
-
-# if [ $HOMEBREW_PREFIX != $HOMEBREW_REPOSITORY ]; then
-#   ln -sf "$HOMEBREW_REPOSITORY/bin/brew" "$HOMEBREW_PREFIX/bin/brew"
-# fi
-
-# # Download Homebrew.
-# export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
-# git init
-# git config remote.origin.url "https://github.com/Homebrew/brew"
-# git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-# git fetch  --tags --force
-# git reset  --hard origin/master
-# unset GIT_DIR GIT_WORK_TREE
-# logk
-
-# # Update Homebrew.
-# export PATH="$HOMEBREW_PREFIX/bin:$PATH"
-# logn "Updating Homebrew:"
-# brew update --quiet
-# logk
-
-# Check and install any remaining software updates.
-logn "Checking for software updates:"
-if softwareupdate -l 2>&1 | grep "No new software available."; then
+  # Download Homebrew.
+  export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
+  git init
+  git config remote.origin.url "https://github.com/Homebrew/brew"
+  git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+  git fetch --tags --force
+  git reset --hard origin/master
+  unset GIT_DIR GIT_WORK_TREE
   logk
-else
-  echo
-  log "Installing software updates:"
-  if [ -z "$ZSH_DOTFILES_PREP_CI" ]; then
-    sudo_askpass softwareupdate --install --all
-    xcode_license
+
+  # Update Homebrew.
+  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+  logn "Updating Homebrew:"
+  brew update --quiet
+  logk
+
+  logn '(brew) Installing openssl readline sqlite3 xz zlib tcl-tk'
+  brew install openssl readline sqlite3 xz zlib tcl-tk
+  logk
+
+  # Check and install any remaining software updates.
+  logn "Checking for software updates:"
+  if softwareupdate -l 2>&1 | grep "No new software available."; then
     logk
   else
-    echo "SKIPPED (for CI)"
-  fi
-fi
-
-# Setup Brewfile
-if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && { [ ! -f "$HOME/.Brewfile" ] || [ "$HOME/.Brewfile" -ef "$HOME/.homebrew-brewfile/Brewfile" ]; }; then
-  HOMEBREW_BREWFILE_URL="https://github.com/$ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile"
-
-  if git ls-remote "$HOMEBREW_BREWFILE_URL" &>/dev/null; then
-    log "Fetching $ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile from GitHub:"
-    if [ ! -d "$HOME/.homebrew-brewfile" ]; then
-      log "Cloning to ~/.homebrew-brewfile:"
-      git clone "$HOMEBREW_BREWFILE_URL" ~/.homebrew-brewfile
+    echo
+    log "Installing software updates:"
+    if [ -z "$ZSH_DOTFILES_PREP_CI" ]; then
+      sudo_askpass softwareupdate --install --all
+      xcode_license
       logk
     else
-      (
-        cd ~/.homebrew-brewfile
-        git pull
-      )
+      echo "SKIPPED (for CI)"
     fi
-    ln -sf ~/.homebrew-brewfile/Brewfile ~/.Brewfile
+  fi
+
+  # Setup Brewfile
+  if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && { [ ! -f "$HOME/.Brewfile" ] || [ "$HOME/.Brewfile" -ef "$HOME/.homebrew-brewfile/Brewfile" ]; }; then
+    HOMEBREW_BREWFILE_URL="https://github.com/$ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile"
+
+    if git ls-remote "$HOMEBREW_BREWFILE_URL" &>/dev/null; then
+      log "Fetching $ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile from GitHub:"
+      if [ ! -d "$HOME/.homebrew-brewfile" ]; then
+        log "Cloning to ~/.homebrew-brewfile:"
+        git clone "$HOMEBREW_BREWFILE_URL" ~/.homebrew-brewfile
+        logk
+      else
+        (
+          cd ~/.homebrew-brewfile
+          git pull
+        )
+      fi
+      ln -sf ~/.homebrew-brewfile/Brewfile ~/.Brewfile
+      logk
+    fi
+  fi
+
+  # Install from local Brewfile
+  if [ -f "$HOME/.Brewfile" ]; then
+    log "Installing from user Brewfile on GitHub:"
+    brew bundle check --global || brew bundle --global
     logk
   fi
 fi
 
-# Install from local Brewfile
-if [ -f "$HOME/.Brewfile" ]; then
-  log "Installing from user Brewfile on GitHub:"
-  brew bundle check --global || brew bundle --global
-  logk
-fi
+logn "Make local bin paths"
+mkdir -pv ~/bin || true
+mkdir -pv ~/.bin || true
+mkdir -pv ~/.local/bin || true
+mkdir -pv ~/.local/src || true
 
 ## ------------------------------------------------------
 
