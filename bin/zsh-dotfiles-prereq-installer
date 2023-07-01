@@ -22,6 +22,19 @@
 # Borrow some of strap.sh
 # SOURCE: https://raw.githubusercontent.com/MikeMcQuaid/strap/6950fe0db92215153cfc9d6c7e749783e2ca9430/bin/strap.sh
 
+# Colors
+ESC_SEQ="\x1b["
+COL_RESET=$ESC_SEQ"39;49;00m"
+COL_RED=$ESC_SEQ"31;01m"
+COL_GREEN=$ESC_SEQ"32;01m"
+COL_YELLOW=$ESC_SEQ"33;01m"
+# shellcheck disable=SC2034  # Unused variables left for readability
+COL_BLUE=$ESC_SEQ"34;01m"
+# shellcheck disable=SC2034  # Unused variables left for readability
+COL_MAGENTA=$ESC_SEQ"35;01m"
+# shellcheck disable=SC2034  # Unused variables left for readability
+COL_CYAN=$ESC_SEQ"36;01m"
+
 set -e
 # [ -n "$ZSH_DOTFILES_PREP_DEBUG" ] && set -x
 
@@ -176,6 +189,51 @@ logskip() {
 
 escape() {
   printf '%s' "${1//\'/\'}"
+}
+
+# SOURCE: https://github.com/atomantic/dotfiles/blob/main/lib_sh/echos.sh
+function ok() {
+  echo -e "${COL_GREEN}[ok]$COL_RESET ""$1"
+}
+
+function bot() {
+  echo -e "\n$COL_GREEN\[._.]/$COL_RESET - ""$1"
+}
+
+function running() {
+  echo -en "$COL_YELLOW ⇒ $COL_RESET""$1"": "
+}
+
+function action() {
+  echo -e "\n${COL_YELLOW}[action]:$COL_RESET\n ⇒ $1..."
+}
+
+function warn() {
+  echo -e "${COL_YELLOW}[warning]$COL_RESET ""$1"
+}
+
+function error() {
+  echo -e "${COL_RED}[error]$COL_RESET ""$1"
+}
+
+function print_error() {
+  printf " [✖] %s\n" "$1"
+}
+
+function print_result() {
+
+  if [ "$1" -eq 0 ]; then
+    print_success "$2"
+  else
+    print_error "$2"
+  fi
+
+  return "$1"
+
+}
+
+function print_success() {
+  printf " [✔] %s\n" "$1"
 }
 
 # Given a list of scripts in the dotfiles repo, run the first one that exists
@@ -477,7 +535,7 @@ logk
 
 # Check and install any remaining software updates.
 logn "Checking for software updates:"
-if softwareupdate -l 2>&1 | grep "" "No new software available."; then
+if softwareupdate -l 2>&1 | grep "No new software available."; then
   logk
 else
   echo
@@ -491,12 +549,33 @@ else
   fi
 fi
 
-# # Install from local Brewfile
-# if [ -f "$HOME/.Brewfile" ]; then
-#   log "Installing from user Brewfile on GitHub:"
-#   brew bundle check --global || brew bundle --global
-#   logk
-# fi
+# Setup Brewfile
+if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && { [ ! -f "$HOME/.Brewfile" ] || [ "$HOME/.Brewfile" -ef "$HOME/.homebrew-brewfile/Brewfile" ]; }; then
+  HOMEBREW_BREWFILE_URL="https://github.com/$ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile"
+
+  if git ls-remote "$HOMEBREW_BREWFILE_URL" &>/dev/null; then
+    log "Fetching $ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile from GitHub:"
+    if [ ! -d "$HOME/.homebrew-brewfile" ]; then
+      log "Cloning to ~/.homebrew-brewfile:"
+      git clone "$HOMEBREW_BREWFILE_URL" ~/.homebrew-brewfile
+      logk
+    else
+      (
+        cd ~/.homebrew-brewfile
+        git pull
+      )
+    fi
+    ln -sf ~/.homebrew-brewfile/Brewfile ~/.Brewfile
+    logk
+  fi
+fi
+
+# Install from local Brewfile
+if [ -f "$HOME/.Brewfile" ]; then
+  log "Installing from user Brewfile on GitHub:"
+  brew bundle check --global || brew bundle --global
+  logk
+fi
 
 ## ------------------------------------------------------
 
