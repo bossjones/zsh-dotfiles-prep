@@ -44,11 +44,13 @@ jobs:
         env:
           ZSH_DOTFILES_PREP_CI: 1
           ZSH_DOTFILES_PREP_DEBUG: 1
+          ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
 
       - name: Rerun bin/zsh-dotfiles-prereq-installer
         run: bin/zsh-dotfiles-prereq-installer
         env:
           ZSH_DOTFILES_PREP_CI: 1
+          ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
 
       # - name: Set up Homebrew PATH
       #   if: runner.os != 'windows'
@@ -60,7 +62,10 @@ jobs:
       #       echo "/home/linuxbrew/.linuxbrew/bin:/usr/bin:/bin" >> "${GITHUB_PATH}"
       #     fi
 
+
       - run: brew config
+
+      - run: brew cleanup
 
       - run: brew doctor
 
