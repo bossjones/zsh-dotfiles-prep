@@ -751,182 +751,182 @@ fi
 
 if [ "$CURRENT_OS" = "macos" ]; then
   cat <<'EOF' >~/compat.bash
-  # ---------------------------------------------------------
-  # chezmoi managed - ~/.bashrc
-  # ---------------------------------------------------------
-  # homebrew var setup
-  UNAME_MACHINE="$(/usr/bin/uname -m)"
-  if [[ $UNAME_MACHINE == "arm64" ]]; then
-    HOMEBREW_PREFIX="/opt/homebrew"
-    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
-  else
-    HOMEBREW_PREFIX="/usr/local"
-    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
-  fi
+# ---------------------------------------------------------
+# chezmoi managed - ~/.bashrc
+# ---------------------------------------------------------
+# homebrew var setup
+UNAME_MACHINE="$(/usr/bin/uname -m)"
+if [[ $UNAME_MACHINE == "arm64" ]]; then
+  HOMEBREW_PREFIX="/opt/homebrew"
+  HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+else
+  HOMEBREW_PREFIX="/usr/local"
+  HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+fi
 
 
-  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
-  export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
-  # export PATH="/usr/local/cuda/bin:${PATH}"
-  # export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
-  # export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
+# export PATH="/usr/local/cuda/bin:${PATH}"
+# export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
+# export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 
-  [ -f ~/.fzf.bash ] && . ~/.fzf.bash
+[ -f ~/.fzf.bash ] && . ~/.fzf.bash
 
-  . "$HOME/.cargo/env"
+. "$HOME/.cargo/env"
 
 
-  ######################################################################################
-  # pyenv
-  ######################################################################################
+######################################################################################
+# pyenv
+######################################################################################
+export PYENV_ROOT=~/.pyenv
+export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
+OPT_HOMEBREW="${HOMEBREW_PREFIX}"
+if [ -s "$OPT_HOMEBREW"/bin/brew ]; then
+    eval "$($OPT_HOMEBREW/bin/brew shellenv)"
+fi
+
+if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
+  eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
+  eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
+  fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
+  pyenv virtualenvwrapper_lazy
+
+elif [ -s "$HOME/.pyenv/bin/pyenv" ]; then
   export PYENV_ROOT=~/.pyenv
-  export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
-  OPT_HOMEBREW="${HOMEBREW_PREFIX}"
-  if [ -s "$OPT_HOMEBREW"/bin/brew ]; then
-      eval "$($OPT_HOMEBREW/bin/brew shellenv)"
-  fi
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$($HOME/.pyenv/bin/pyenv init --path)"
+  eval "$($HOME/.pyenv/bin/pyenv init -)"
+  # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
+fi
+######################################################################################
 
-  if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
-    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
-    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
-    fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
-    pyenv virtualenvwrapper_lazy
+OS="`uname`"
+case $OS in
+  'Linux')
+    OS='Linux'
+    ;;
+  'FreeBSD')
+    OS='FreeBSD'
+    ;;
+  'WindowsNT')
+    OS='Windows'
+    ;;
+  'Darwin')
+    OS='Mac'
+    ;;
+  'SunOS')
+    OS='Solaris'
+    ;;
+  *) ;;
+esac
 
-  elif [ -s "$HOME/.pyenv/bin/pyenv" ]; then
-    export PYENV_ROOT=~/.pyenv
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$($HOME/.pyenv/bin/pyenv init --path)"
-    eval "$($HOME/.pyenv/bin/pyenv init -)"
-    # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
-  fi
-  ######################################################################################
+if [ "$OS" = 'Linux' ]
+then
+    export ASDF_DIR="${HOME}/.asdf"
+    . "$HOME/.asdf/asdf.sh"
+    . "$HOME/.asdf/lib/asdf.sh"
+    . "$HOME/.asdf/completions/asdf.bash"
+fi
 
-  OS="`uname`"
-  case $OS in
-    'Linux')
-      OS='Linux'
-      ;;
-    'FreeBSD')
-      OS='FreeBSD'
-      ;;
-    'WindowsNT')
-      OS='Windows'
-      ;;
-    'Darwin')
-      OS='Mac'
-      ;;
-    'SunOS')
-      OS='Solaris'
-      ;;
-    *) ;;
-  esac
-
-  if [ "$OS" = 'Linux' ]
-  then
-      export ASDF_DIR="${HOME}/.asdf"
-      . "$HOME/.asdf/asdf.sh"
-      . "$HOME/.asdf/lib/asdf.sh"
-      . "$HOME/.asdf/completions/asdf.bash"
-  fi
-
-  # fnm
-  export PATH="$HOME/.local/share/fnm:$PATH"
-  eval "`fnm env`"
+# fnm
+export PATH="$HOME/.local/share/fnm:$PATH"
+eval "`fnm env`"
 EOF
 
   cat <<'EOF' >~/compat.sh
-  # ---------------------------------------------------------
-  # chezmoi managed - ~/.bashrc
-  # ---------------------------------------------------------
-  # homebrew var setup
-  UNAME_MACHINE="$(/usr/bin/uname -m)"
-  if [ "$UNAME_MACHINE" = "arm64" ]
-  then
-    HOMEBREW_PREFIX="/opt/homebrew"
-    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
-  else
-    HOMEBREW_PREFIX="/usr/local"
-    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
-  fi
+# ---------------------------------------------------------
+# chezmoi managed - ~/.bashrc
+# ---------------------------------------------------------
+# homebrew var setup
+UNAME_MACHINE="$(/usr/bin/uname -m)"
+if [ "$UNAME_MACHINE" = "arm64" ]
+then
+  HOMEBREW_PREFIX="/opt/homebrew"
+  HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+else
+  HOMEBREW_PREFIX="/usr/local"
+  HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+fi
 
 
-  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
-  export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
-  # export PATH="/usr/local/cuda/bin:${PATH}"
-  # export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
-  # export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
+# export PATH="/usr/local/cuda/bin:${PATH}"
+# export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
+# export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 
-  if [ -f "$HOME/.fzf.bash" ]
-  then
-    source ~/.fzf.bash
-  fi
+if [ -f "$HOME/.fzf.bash" ]
+then
+  source ~/.fzf.bash
+fi
 
-  if [ -f "$HOME/.cargo/env" ]
-  then
-    source ~/.fzf.bash
-  fi
+if [ -f "$HOME/.cargo/env" ]
+then
+  source ~/.fzf.bash
+fi
 
 
-  ######################################################################################
-  # pyenv
-  ######################################################################################
+######################################################################################
+# pyenv
+######################################################################################
+export PYENV_ROOT=~/.pyenv
+export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
+OPT_HOMEBREW="${HOMEBREW_PREFIX}"
+if [ -s "$OPT_HOMEBREW"/bin/brew ]
+then
+    eval "$($OPT_HOMEBREW/bin/brew shellenv)"
+fi
+
+if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
+  eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
+  eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
+  fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
+  pyenv virtualenvwrapper_lazy
+
+elif [ -s "$HOME/.pyenv/bin/pyenv" ]
+then
   export PYENV_ROOT=~/.pyenv
-  export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
-  OPT_HOMEBREW="${HOMEBREW_PREFIX}"
-  if [ -s "$OPT_HOMEBREW"/bin/brew ]
-  then
-      eval "$($OPT_HOMEBREW/bin/brew shellenv)"
-  fi
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$($HOME/.pyenv/bin/pyenv init --path)"
+  eval "$($HOME/.pyenv/bin/pyenv init -)"
+  # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
+fi
+######################################################################################
 
-  if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
-    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
-    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
-    fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
-    pyenv virtualenvwrapper_lazy
+OS="`uname`"
+case $OS in
+  'Linux')
+    OS='Linux'
+    ;;
+  'FreeBSD')
+    OS='FreeBSD'
+    ;;
+  'WindowsNT')
+    OS='Windows'
+    ;;
+  'Darwin')
+    OS='Mac'
+    ;;
+  'SunOS')
+    OS='Solaris'
+    ;;
+  *) ;;
+esac
 
-  elif [ -s "$HOME/.pyenv/bin/pyenv" ]
-  then
-    export PYENV_ROOT=~/.pyenv
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$($HOME/.pyenv/bin/pyenv init --path)"
-    eval "$($HOME/.pyenv/bin/pyenv init -)"
-    # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
-  fi
-  ######################################################################################
+if [ "$OS" = 'Linux' ]
+then
+    export ASDF_DIR="${HOME}/.asdf"
+    . "$HOME/.asdf/asdf.sh"
+    . "$HOME/.asdf/lib/asdf.sh"
+    . "$HOME/.asdf/completions/asdf.bash"
+fi
 
-  OS="`uname`"
-  case $OS in
-    'Linux')
-      OS='Linux'
-      ;;
-    'FreeBSD')
-      OS='FreeBSD'
-      ;;
-    'WindowsNT')
-      OS='Windows'
-      ;;
-    'Darwin')
-      OS='Mac'
-      ;;
-    'SunOS')
-      OS='Solaris'
-      ;;
-    *) ;;
-  esac
-
-  if [ "$OS" = 'Linux' ]
-  then
-      export ASDF_DIR="${HOME}/.asdf"
-      . "$HOME/.asdf/asdf.sh"
-      . "$HOME/.asdf/lib/asdf.sh"
-      . "$HOME/.asdf/completions/asdf.bash"
-  fi
-
-  # fnm
-  export PATH="$HOME/.local/share/fnm:$PATH"
-  eval "`fnm env`"
+# fnm
+export PATH="$HOME/.local/share/fnm:$PATH"
+eval "`fnm env`"
 EOF
 
   add_helper_functions_to_shells
