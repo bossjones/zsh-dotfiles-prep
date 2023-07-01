@@ -970,7 +970,7 @@ logk
 # Brew python install
 # ---------------------------------------------------------
 install_global_python() {
-  brew_install_all python3 python-tk python@3.11 python-tk@3.11
+  brew install python3 python-tk python@3.11 python-tk@3.11
   python3 -m ensurepip --upgrade
   pip3 install --upgrade "setuptools<60" wheel
   pip3 install --upgrade pip 2>&1 | grep -v "DEPRECATION:"
