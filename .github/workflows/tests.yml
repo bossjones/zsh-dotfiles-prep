@@ -44,6 +44,7 @@ jobs:
         env:
           ZSH_DOTFILES_PREP_CI: 1
           ZSH_DOTFILES_PREP_DEBUG: 1
+          # NOTE: Skip Brew bundle for now, speed up tests
           ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
 
       - name: Rerun bin/zsh-dotfiles-prereq-installer
