@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck sdhell=dash
 #/ Usage: bin/zsh-dotfiles-prereq-installer [--debug]
 #/ Install development dependencies on macOS.
 # SOURCE: https://github.com/search?q=repo%3AMikeMcQuaid%2Fstrap%20Xcode&type=code
