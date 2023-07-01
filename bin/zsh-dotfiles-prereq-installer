@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck sdhell=dash
 #/ Usage: bin/zsh-dotfiles-prereq-installer [--debug]
 #/ Install development dependencies on macOS.
 # SOURCE: https://github.com/search?q=repo%3AMikeMcQuaid%2Fstrap%20Xcode&type=code
@@ -624,7 +625,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # -----------------------------------------------------------------
 
   logn '(brew) Installing openssl readline sqlite3 xz zlib tcl-tk'
-  brew install openssl readline sqlite3 xz zlib tcl-tk
+  brew install openssl readline sqlite3 xz zlib tcl-tk asdf pkg-config autogen bash bzip2 libffi cheat cmake python@3.10 curl diff-so-fancy direnv fd gnutls findutils fnm fpp fzf gawk gcc gh git gnu-indent gnu-sed gnu-tar grep gzip hub jq less lesspipe libxml2 lsof luarocks luv moreutils neofetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper ruby-build rbenv reattach-to-user-namespace ripgrep rsync screen screenfetch shellcheck shfmt unzip urlview vim watch wget zlib zsh
   logk
 
   # Check and install any remaining software updates.
@@ -745,7 +746,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
   ######################################################################################
   export PYENV_ROOT=~/.pyenv
   export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
-  local OPT_HOMEBREW="${HOMEBREW_PREFIX}"
+  OPT_HOMEBREW="${HOMEBREW_PREFIX}"
   if [ -s "$OPT_HOMEBREW"/bin/brew ]; then
       eval "$($OPT_HOMEBREW/bin/brew shellenv)"
   fi
@@ -837,7 +838,7 @@ EOF
   ######################################################################################
   export PYENV_ROOT=~/.pyenv
   export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
-  local OPT_HOMEBREW="${HOMEBREW_PREFIX}"
+  OPT_HOMEBREW="${HOMEBREW_PREFIX}"
   if [ -s "$OPT_HOMEBREW"/bin/brew ]
   then
       eval "$($OPT_HOMEBREW/bin/brew shellenv)"
