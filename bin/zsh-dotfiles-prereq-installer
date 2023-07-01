@@ -3,6 +3,12 @@
 #/ Install development dependencies on macOS.
 # SOURCE: https://github.com/search?q=repo%3AMikeMcQuaid%2Fstrap%20Xcode&type=code
 
+# TODO: Add sudoless ? https://github.com/atomantic/dotfiles/blob/main/install.sh#L16C1-L36C3
+# TODO: Host File for ads? https://github.com/atomantic/dotfiles/blob/main/configs/hosts
+# TODO: https://github.com/atomantic/dotfiles/blob/main/install.sh#L38-L52
+# TODO: https://github.com/paulmillr/dotfiles/blob/master/home/.zlogin.sh#L5-L19
+# TODO: https://github.com/mathiasbynens/dotfiles/blob/main/.bash_profile#L42C1-L50
+
 # Install homebrew
 # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 # Install compat shell scripts to set env vars
