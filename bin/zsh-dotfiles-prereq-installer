@@ -915,6 +915,8 @@ EOF
   # shellcheck source=/dev/null
   source "${HOME}/compat.bash"
 
+  logk
+
 fi
 
 # ---------------------------------------------------------
@@ -932,6 +934,7 @@ fi
 # shellcheck disable=SC2046  # Quote this to prevent word splitting.
 . $(brew --prefix asdf)/libexec/asdf.sh
 asdf current
+logk
 
 # ---------------------------------------------------------
 # Brew fzf setup
@@ -942,6 +945,7 @@ asdf current
 $(brew --prefix)/opt/fzf/install --all
 ls -lta ~/.fzf.bash
 ls -lta ~/.fzf.zsh
+logk
 
 # ---------------------------------------------------------
 # Brew python install
@@ -971,6 +975,7 @@ if ! (type "cargo" >/dev/null 2>&1); then
   source "$HOME/.cargo/env"
   # Install Rust Apps
   # cargo install -q cargo-update
+  logk
 fi
 
 # ---------------------------------------------------------
