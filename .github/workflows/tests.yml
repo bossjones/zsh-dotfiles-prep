@@ -1,0 +1,75 @@
+name: GitHub Actions CI
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+jobs:
+  style:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set up Git repository
+        uses: actions/checkout@main
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Install shfmt
+        run: brew install shfmt
+
+      - run: contrib/style.sh
+
+  tests:
+    runs-on: macos-12
+    steps:
+      - name: Set up Git repository
+        uses: actions/checkout@main
+
+      - run: brew test-bot --only-cleanup-before
+
+      - name: Cleanup macOS
+        run: |
+          sudo rm -rf /usr/local/bin/brew /usr/local/.??* \
+                      /usr/local/Homebrew \
+                      /Applications/Xcode.app /usr/local/Caskroom \
+                      /Library/Developer/CommandLineTools
+
+      - name: Use newer Xcode
+        run: |
+          ls /Applications/Xcode*.app
+          sudo xcode-select --switch /Applications/Xcode_13.3.1.app/Contents/Developer
+
+      - run: bin/zsh-dotfiles-prereq-installer
+        env:
+          ZSH_DOTFILES_PREP_CI: 1
+          ZSH_DOTFILES_PREP_DEBUG: 1
+          # NOTE: Skip Brew bundle for now, speed up tests
+          ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
+
+      - name: Rerun bin/zsh-dotfiles-prereq-installer
+        run: bin/zsh-dotfiles-prereq-installer
+        env:
+          ZSH_DOTFILES_PREP_CI: 1
+          ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
+
+      # - name: Set up Homebrew PATH
+      #   if: runner.os != 'windows'
+      #   run: |
+      #     if [[ "${{ runner.os }}" = "macOS" ]]
+      #     then
+      #       echo "/usr/local/bin:/usr/bin:/bin" >> "${GITHUB_PATH}"
+      #     else
+      #       echo "/home/linuxbrew/.linuxbrew/bin:/usr/bin:/bin" >> "${GITHUB_PATH}"
+      #     fi
+
+
+      - run: brew config
+
+      - run: brew cleanup
+
+      - run: brew doctor
+
+      - name: Install Ruby dependencies
+        run: brew install gmp openssl@1.1 libyaml
+

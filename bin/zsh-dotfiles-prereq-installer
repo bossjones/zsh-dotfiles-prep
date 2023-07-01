@@ -1,0 +1,969 @@
+#!/usr/bin/env bash
+#/ Usage: bin/zsh-dotfiles-prereq-installer [--debug]
+#/ Install development dependencies on macOS.
+# SOURCE: https://github.com/search?q=repo%3AMikeMcQuaid%2Fstrap%20Xcode&type=code
+
+# Install homebrew
+# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Install compat shell scripts to set env vars
+# Backup .zsh* .profile .bash*, configs for certain apps like:
+#
+
+# > ~/.config
+# bpytop  configstore   fontconfig  gh    iterm2   lvim      op         sourcery
+# cheat   ffmpeg-tools  gallery-dl  htop  litecli  neofetch  powerline  wandb
+
+# backup ~/.asdf
+# backup ~/bin
+# backup ~/.bin
+# backup ~/.local/bin
+# backup ~/.pyenv
+
+# Borrow some of strap.sh
+# SOURCE: https://raw.githubusercontent.com/MikeMcQuaid/strap/6950fe0db92215153cfc9d6c7e749783e2ca9430/bin/strap.sh
+
+# Colors
+ESC_SEQ="\x1b["
+COL_RESET=$ESC_SEQ"39;49;00m"
+COL_RED=$ESC_SEQ"31;01m"
+COL_GREEN=$ESC_SEQ"32;01m"
+COL_YELLOW=$ESC_SEQ"33;01m"
+# shellcheck disable=SC2034  # Unused variables left for readability
+COL_BLUE=$ESC_SEQ"34;01m"
+# shellcheck disable=SC2034  # Unused variables left for readability
+COL_MAGENTA=$ESC_SEQ"35;01m"
+# shellcheck disable=SC2034  # Unused variables left for readability
+COL_CYAN=$ESC_SEQ"36;01m"
+
+set -e
+# https://www.gnu.org/software/bash/manual/html_node/Bash-POSIX-Mode.html#Bash-POSIX-Mode
+# set -o posix
+# [ -n "$ZSH_DOTFILES_PREP_DEBUG" ] && set -x
+
+[[ $1 == "--debug" || -o xtrace ]] && ZSH_DOTFILES_PREP_DEBUG="1"
+ZSH_DOTFILES_PREP_SUCCESS=""
+
+sudo_askpass() {
+  if [ -n "$SUDO_ASKPASS" ]; then
+    sudo --askpass "$@"
+  else
+    sudo "$@"
+  fi
+}
+
+cleanup() {
+  set +e
+  sudo_askpass rm -rf "$CLT_PLACEHOLDER" "$SUDO_ASKPASS" "$SUDO_ASKPASS_DIR"
+  sudo --reset-timestamp
+  if [ -z "$ZSH_DOTFILES_PREP_SUCCESS" ]; then
+    if [ -n "$ZSH_DOTFILES_PREP_STEP" ]; then
+      echo "!!! $ZSH_DOTFILES_PREP_STEP FAILED" >&2
+    else
+      echo "!!! FAILED" >&2
+    fi
+    if [ -z "$ZSH_DOTFILES_PREP_DEBUG" ]; then
+      echo "!!! Run '$0 --debug' for debugging output." >&2
+      echo "!!! If you're stuck: file an issue with debugging output at:" >&2
+      echo "!!!   $ZSH_DOTFILES_PREP_ISSUES_URL" >&2
+    fi
+  fi
+}
+
+trap "cleanup" EXIT
+
+if [ -n "$ZSH_DOTFILES_PREP_DEBUG" ]; then
+  set -x
+else
+  ZSH_DOTFILES_PREP_QUIET_FLAG="-q"
+  Q="$ZSH_DOTFILES_PREP_QUIET_FLAG"
+  echo "${Q}"
+fi
+
+STDIN_FILE_DESCRIPTOR="0"
+[ -t "$STDIN_FILE_DESCRIPTOR" ] && ZSH_DOTFILES_PREP_INTERACTIVE="1"
+
+# Set by web/app.rb
+# ZSH_DOTFILES_PREP_GIT_NAME=
+# ZSH_DOTFILES_PREP_GIT_EMAIL=
+# ZSH_DOTFILES_PREP_GITHUB_USER=
+# ZSH_DOTFILES_PREP_GITHUB_TOKEN=
+# CUSTOM_HOMEBREW_TAP=
+# CUSTOM_BREW_COMMAND=
+ZSH_DOTFILES_PREP_ISSUES_URL='https://github.com/bossjones/zsh-dotfiles-prep/issues/new'
+
+# We want to always prompt for sudo password at least once rather than doing
+# root stuff unexpectedly.
+sudo --reset-timestamp
+
+# functions for turning off debug for use when handling the user password
+clear_debug() {
+  set +x
+}
+
+reset_debug() {
+  if [ -n "$ZSH_DOTFILES_PREP_DEBUG" ]; then
+    set -x
+  fi
+}
+
+# Initialise (or reinitialise) sudo to save unhelpful prompts later.
+sudo_init() {
+  if [ -z "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+    return
+  fi
+
+  # If TouchID for sudo is setup: use that instead.
+  if grep -q pam_tid /etc/pam.d/sudo; then
+    return
+  fi
+
+  local SUDO_PASSWORD SUDO_PASSWORD_SCRIPT
+
+  if ! sudo --validate --non-interactive &>/dev/null; then
+    while true; do
+      read -rsp "--> Enter your password (for sudo access):" SUDO_PASSWORD
+      echo
+      if sudo --validate --stdin 2>/dev/null <<<"$SUDO_PASSWORD"; then
+        break
+      fi
+
+      unset SUDO_PASSWORD
+      echo "!!! Wrong password!" >&2
+    done
+
+    clear_debug
+    SUDO_PASSWORD_SCRIPT="$(
+      cat <<BASH
+#!/bin/bash
+echo "$SUDO_PASSWORD"
+BASH
+    )"
+    unset SUDO_PASSWORD
+    SUDO_ASKPASS_DIR="$(mktemp -d)"
+    SUDO_ASKPASS="$(mktemp "$SUDO_ASKPASS_DIR"/strap-askpass-XXXXXXXX)"
+    chmod 700 "$SUDO_ASKPASS_DIR" "$SUDO_ASKPASS"
+    bash -c "cat > '$SUDO_ASKPASS'" <<<"$SUDO_PASSWORD_SCRIPT"
+    unset SUDO_PASSWORD_SCRIPT
+    reset_debug
+
+    export SUDO_ASKPASS
+  fi
+}
+
+sudo_refresh() {
+  clear_debug
+  if [ -n "$SUDO_ASKPASS" ]; then
+    sudo --askpass --validate
+  else
+    sudo_init
+  fi
+  reset_debug
+}
+
+abort() {
+  ZSH_DOTFILES_PREP_STEP=""
+  echo "!!! $*" >&2
+  exit 1
+}
+
+log() {
+  ZSH_DOTFILES_PREP_STEP="$*"
+  sudo_refresh
+  echo "--> $*"
+}
+
+logn() {
+  ZSH_DOTFILES_PREP_STEP="$*"
+  sudo_refresh
+  printf -- "--> %s " "$*"
+}
+
+logk() {
+  ZSH_DOTFILES_PREP_STEP=""
+  echo "OK"
+}
+
+logskip() {
+  ZSH_DOTFILES_PREP_STEP=""
+  echo "SKIPPED"
+  echo "$*"
+}
+
+escape() {
+  printf '%s' "${1//\'/\'}"
+}
+
+# SOURCE: https://github.com/atomantic/dotfiles/blob/main/lib_sh/echos.sh
+function ok() {
+  echo -e "${COL_GREEN}[ok]$COL_RESET ""$1"
+}
+
+function bot() {
+  echo -e "\n$COL_GREEN\[._.]/$COL_RESET - ""$1"
+}
+
+function running() {
+  echo -en "$COL_YELLOW ⇒ $COL_RESET""$1"": "
+}
+
+function action() {
+  echo -e "\n${COL_YELLOW}[action]:$COL_RESET\n ⇒ $1..."
+}
+
+function warn() {
+  echo -e "${COL_YELLOW}[warning]$COL_RESET ""$1"
+}
+
+function error() {
+  echo -e "${COL_RED}[error]$COL_RESET ""$1"
+}
+
+function print_error() {
+  printf " [✖] %s\n" "$1"
+}
+
+function print_result() {
+
+  if [ "$1" -eq 0 ]; then
+    print_success "$2"
+  else
+    print_error "$2"
+  fi
+
+  return "$1"
+
+}
+
+function print_success() {
+  printf " [✔] %s\n" "$1"
+}
+
+# Given a list of scripts in the dotfiles repo, run the first one that exists
+run_dotfile_scripts() {
+  if [ -d ~/.dotfiles ]; then
+    (
+      cd ~/.dotfiles
+      for i in "$@"; do
+        if [ -f "$i" ] && [ -x "$i" ]; then
+          log "Running dotfiles $i:"
+          if [ -z "$ZSH_DOTFILES_PREP_DEBUG" ]; then
+            "$i" 2>/dev/null
+          else
+            "$i"
+          fi
+          break
+        fi
+      done
+    )
+  fi
+}
+
+# SOURCE: https://rtx.pub/install.sh
+#region environment setup
+get_os() {
+  os="$(uname -s)"
+  if [ "$os" = Darwin ]; then
+    echo "macos"
+  elif [ "$os" = Linux ]; then
+    echo "linux"
+  else
+    error "unsupported OS: $os"
+  fi
+}
+
+# SOURCE: https://rtx.pub/install.sh
+get_arch() {
+  arch="$(uname -m)"
+  if [ "$arch" = x86_64 ]; then
+    echo "x64"
+  elif [ "$arch" = aarch64 ] || [ "$arch" = arm64 ]; then
+    echo "arm64"
+  else
+    error "unsupported architecture: $arch"
+  fi
+}
+
+CURRENT_OS="$(get_os)"
+# shellcheck disable=SC2034  # Unused variables left for readability
+CURRENT_ARCH="$(get_arch)"
+
+get_system() {
+  os="$(get_os)"
+  arch="$(get_arch)"
+}
+# SOURCE: https://rtx.pub/install.sh
+
+# [ -e filepath ] Returns true if file exists.
+# [ -x filepath ] Returns true if file exists and executable.
+# [ -S filepath ] Returns true if file exists and its a socket file.
+# [ expr1 -a expr2 ] Returns true if both the expression is true.
+# [ expr1 -o expr2 ] Returns true if either of the expression1 or 2 is true.
+# From the man bash pages (especially the CONDITIONAL EXPRESSIONS section):
+# -a file
+#         True if file exists.
+#  -b file
+#         True if file exists and is a block special file.
+#  -c file
+#         True if file exists and is a character special file.
+#  -d file
+#         True if file exists and is a directory.
+#  -e file
+#         True if file exists.
+#  -f file
+#         True if file exists and is a regular file.
+#  -g file
+#         True if file exists and is set-group-id.
+#  -h file
+#         True if file exists and is a symbolic link.
+#  -k file
+#         True if file exists and its ``sticky'' bit is set.
+#  -p file
+#         True if file exists and is a named pipe (FIFO).
+#  -r file
+#         True if file exists and is readable.
+#  -s file
+#         True if file exists and has a size greater than zero.
+#  -t fd  True if file descriptor fd is open and refers to a terminal.
+#  -u file
+#         True if file exists and its set-user-id bit is set.
+#  -w file
+#         True if file exists and is writable.
+#  -x file
+#         True if file exists and is executable.
+
+is_file_or_folder() {
+  # if [ -d ~/.dotfiles ]; then
+  (
+    # logn "does this exists: $1"
+    # for i in "$@"; do
+    # if is regular file, or symbolic link, or directory
+    if [ -f "$1" ] || [ -h "$1" ] || [ -d "$1" ]; then
+      echo "${1}"
+    else
+      echo ""
+    fi
+    # done
+  )
+  # fi
+}
+
+# https://github.com/bitflight-devops/shell-scripts/blob/main/install.sh
+command_exists() { command -v "$@" >/dev/null 2>&1; }
+
+# create_backup_list() {
+#   # Define a list of string variable
+#   # shellcheck disable=SC2088  # Tilde does not expand in quotes
+#   to_check_for="~/.asdf,~/bin,~/.bin,~/.local,~/.pyenv,~/.config/gh,~/.config/lvim,~/.config/sourcery,~/.config/cheat,~/.zshrc.local,~/.zshrc,~/.zprofile,~/.zshenv,~/.zsh.d,~/.profile,~/.bash_profile"
+
+#   # Use comma as separator and apply as pattern
+#   for val in ${to_check_for//,/ }
+#   do
+#     echo -e "${val}"
+#   done
+# }
+
+# Backup .zsh* .profile .bash*, configs for certain apps like:
+#
+
+# > ~/.config
+# bpytop  configstore   fontconfig  gh    iterm2   lvim      op         sourcery
+# cheat   ffmpeg-tools  gallery-dl  htop  litecli  neofetch  powerline  wandb
+
+# backup ~/.asdf
+# backup ~/bin
+# backup ~/.bin
+# backup ~/.local/bin
+# backup ~/.pyenv
+
+take_backup() {
+  # Define a list of string variable
+  # shellcheck disable=SC2088  # Tilde does not expand in quotes
+  # to_check_for="~/.asdf,~/bin,~/.bin,~/.local,~/.pyenv,~/.config/gh,~/.config/lvim,~/.config/sourcery,~/.config/cheat,~/.zshrc.local,~/.zshrc,~/.zprofile,~/.zshenv,~/.zsh.d,~/.profile"
+
+  echo "Creating backups folder ~/backups"
+  mkdir -pv ~/backups || true >/dev/null
+
+  echo "Check For existence of file/folder"
+
+  # shellcheck disable=SC2088  # Tilde does not expand in quotes
+  arr=(~/.bashrc ~/.bash_profile ~/.zshrc.local ~/.zshrc ~/.zprofile ~/.zshenv ~/.zsh.d ~/.profile ~/.config)
+
+  echo "${arr[@]}"
+
+  echo "Backing up the following files/folders:"
+
+  ts=$(date +"%Y%m%d_%H%M%S")
+
+  # shellcheck disable=SC2086  # Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2116  # Useless echo?
+  # shellcheck disable=SC2046  # Quote this to prevent word splitting
+  /usr/local/opt/gnu-tar/libexec/gnubin/tar --create --gzip --dereference --file=${HOME}/backups/"${ts}"_zsh_dotfiles.tgz $(echo "${arr[@]}")
+
+}
+
+reshim() {
+  # SOURCE: https://github.com/bitflight-devops/shell-scripts/blob/27bff97ed9106c7c21f70d397887bbf514eb80e4/mac_development_computer_setup/helper_functions.sh
+  # Reshim ASDF if it is installed
+  if command_exists asdf; then
+    asdf reshim
+  fi
+}
+
+[ "$USER" = "root" ] && abort "Run zsh-dotfiles-prereq-installer as yourself, not root."
+which grep
+groups | \grep -E "\b(admin)\b" || abort "Add $USER to the admin group."
+
+# Prevent sleeping during script execution, as long as the machine is on AC power
+caffeinate -s -w $$ &
+
+# Check and, if necessary, enable sudo authentication using TouchID.
+# Don't care about non-alphanumeric filenames when doing a specific match
+# shellcheck disable=SC2010
+if ls /usr/lib/pam | grep "" "pam_tid.so"; then
+  logn "Configuring sudo authentication using TouchID:"
+  PAM_FILE="/etc/pam.d/sudo"
+  FIRST_LINE="# sudo: auth account password session"
+  if grep "" pam_tid.so "$PAM_FILE"; then
+    logk
+  elif ! head -n1 "$PAM_FILE" | grep "" "$FIRST_LINE"; then
+    logskip "$PAM_FILE is not in the expected format!"
+  else
+    TOUCHID_LINE="auth       sufficient     pam_tid.so"
+    sudo_askpass sed -i .bak -e \
+      "s/$FIRST_LINE/$FIRST_LINE\n$TOUCHID_LINE/" \
+      "$PAM_FILE"
+    sudo_askpass rm "$PAM_FILE.bak"
+    logk
+  fi
+fi
+
+# Set some basic security settings.
+logn "Configuring security settings:"
+# sudo_askpass defaults write com.apple.Safari \
+#   com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaEnabled \
+#   -bool false
+# sudo_askpass defaults write com.apple.Safari \
+#   com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaEnabledForLocalFiles \
+#   -bool false
+# sudo_askpass defaults write com.apple.screensaver askForPassword -int 1
+# sudo_askpass defaults write com.apple.screensaver askForPasswordDelay -int 0
+# sudo_askpass defaults write /Library/Preferences/com.apple.alf globalstate -int 1
+# sudo_askpass launchctl load /System/Library/LaunchDaemons/com.apple.alf.agent.plist 2>/dev/null
+
+# if [ -n "$ZSH_DOTFILES_PREP_GIT_NAME" ] && [ -n "$ZSH_DOTFILES_PREP_GIT_EMAIL" ]; then
+#   LOGIN_TEXT=$(escape "Found this computer? Please contact $ZSH_DOTFILES_PREP_GIT_NAME at $ZSH_DOTFILES_PREP_GIT_EMAIL.")
+#   echo "$LOGIN_TEXT" | grep -q '[()]' && LOGIN_TEXT="'$LOGIN_TEXT'"
+#   sudo_askpass defaults write /Library/Preferences/com.apple.loginwindow \
+#     LoginwindowText \
+#     "$LOGIN_TEXT"
+# fi
+# logk
+
+# # Check and enable full-disk encryption.
+# logn "Checking full-disk encryption status:"
+# if fdesetup status | grep  -E "FileVault is (On|Off, but will be enabled after the next restart)."; then
+#   logk
+# elif [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
+#   echo "SKIPPED (for CI)"
+# elif [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+#   echo
+#   log "Enabling full-disk encryption on next reboot:"
+#   sudo_askpass fdesetup enable -user "$USER" |
+#     tee ~/Desktop/"FileVault Recovery Key.txt"
+#   logk
+# else
+#   echo
+#   abort "Run 'sudo fdesetup enable -user \"$USER\"' to enable full-disk encryption."
+# fi
+
+if [ "$CURRENT_OS" = "macos" ]; then
+
+  # Install the Xcode Command Line Tools.
+  if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
+    log "Installing the Xcode Command Line Tools:"
+    CLT_PLACEHOLDER="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
+    sudo_askpass touch "$CLT_PLACEHOLDER"
+
+    CLT_PACKAGE=$(softwareupdate -l |
+      grep -B 1 "Command Line Tools" |
+      awk -F"*" '/^ *\*/ {print $2}' |
+      sed -e 's/^ *Label: //' -e 's/^ *//' |
+      sort -V |
+      tail -n1)
+    sudo_askpass softwareupdate -i "$CLT_PACKAGE"
+    sudo_askpass rm -f "$CLT_PLACEHOLDER"
+    if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
+      if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+        echo
+        logn "Requesting user install of Xcode Command Line Tools:"
+        xcode-select --install
+      else
+        echo
+        abort "Run 'xcode-select --install' to install the Xcode Command Line Tools."
+      fi
+    fi
+    logk
+  fi
+
+fi
+
+# Check if the Xcode license is agreed to and agree if not.
+xcode_license() {
+  if /usr/bin/xcrun clang 2>&1 | grep "" license; then
+    if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+      logn "Asking for Xcode license confirmation:"
+      sudo_askpass xcodebuild -license
+      logk
+    else
+      abort "Run 'sudo xcodebuild -license' to agree to the Xcode license."
+    fi
+  fi
+}
+
+if [ "$CURRENT_OS" = "macos" ]; then
+  if [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
+    echo "SKIPPED (for CI)"
+  else
+    xcode_license
+  fi
+fi
+
+# Setup Git configuration.
+logn "Configuring Git:"
+if [ -n "$ZSH_DOTFILES_PREP_GIT_NAME" ] && ! git config user.name >/dev/null; then
+  git config --global user.name "$ZSH_DOTFILES_PREP_GIT_NAME"
+fi
+
+if [ -n "$ZSH_DOTFILES_PREP_GIT_EMAIL" ] && ! git config user.email >/dev/null; then
+  git config --global user.email "$ZSH_DOTFILES_PREP_GIT_EMAIL"
+fi
+
+if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && [ "$(git config github.user)" != "$ZSH_DOTFILES_PREP_GITHUB_USER" ]; then
+  git config --global github.user "$ZSH_DOTFILES_PREP_GITHUB_USER"
+fi
+
+# Squelch git 2.x warning message when pushing
+if ! git config push.default >/dev/null; then
+  git config --global push.default current
+fi
+
+# # Setup GitHub HTTPS credentials.
+# if git credential-osxkeychain 2>&1 | grep  "git.credential-osxkeychain"; then
+#   # Actually execute the credential in case it's a wrapper script for credential-osxkeychain
+#   if git "credential-$(git config --global credential.helper 2>/dev/null)" 2>&1 |
+#     grep -v  "git.credential-osxkeychain"; then
+#     git config --global credential.helper osxkeychain
+#   fi
+
+#   if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && [ -n "$ZSH_DOTFILES_PREP_GITHUB_TOKEN" ]; then
+#     printf 'protocol=https\nhost=github.com\n' | git credential reject
+#     printf 'protocol=https\nhost=github.com\nusername=%s\npassword=%s\n' \
+#       "$ZSH_DOTFILES_PREP_GITHUB_USER" "$ZSH_DOTFILES_PREP_GITHUB_TOKEN" |
+#       git credential approve
+#   fi
+# fi
+logk
+
+if [ "$CURRENT_OS" = "macos" ]; then
+  # Setup Homebrew directory and permissions.
+  logn "Installing Homebrew:"
+  HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
+  HOMEBREW_REPOSITORY="$(brew --repository 2>/dev/null || true)"
+  if [ -z "$HOMEBREW_PREFIX" ] || [ -z "$HOMEBREW_REPOSITORY" ]; then
+    UNAME_MACHINE="$(/usr/bin/uname -m)"
+    if [[ $UNAME_MACHINE == "arm64" ]]; then
+      HOMEBREW_PREFIX="/opt/homebrew"
+      HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+    else
+      HOMEBREW_PREFIX="/usr/local"
+      HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+    fi
+  fi
+  [ -d "$HOMEBREW_PREFIX" ] || sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
+  if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
+    sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
+  fi
+  (
+    cd "$HOMEBREW_PREFIX"
+    sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+    sudo_askpass chown "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+  )
+
+  [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
+  sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
+
+  if [ $HOMEBREW_PREFIX != $HOMEBREW_REPOSITORY ]; then
+    ln -sf "$HOMEBREW_REPOSITORY/bin/brew" "$HOMEBREW_PREFIX/bin/brew"
+  fi
+
+  # Download Homebrew.
+  export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
+  git init
+  git config remote.origin.url "https://github.com/Homebrew/brew"
+  git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+  git fetch --tags --force
+  git reset --hard origin/master
+  unset GIT_DIR GIT_WORK_TREE
+  logk
+
+  # Update Homebrew.
+  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+  logn "Updating Homebrew:"
+  brew update --quiet
+  logk
+
+  # -----------------------------------------------------------------
+  # SOURCE: https://github.com/bitflight-devops/shell-scripts/blob/27bff97ed9106c7c21f70d397887bbf514eb80e4/mac_development_computer_setup/tools_to_help_on_osx_development_computer.md
+  # Fix permissions for Homebrew
+  logn 'Fix permissions for Homebrew'
+  sudo_askpass zsh -c "autoload -Uz compinstall; compinstall; autoload -Uz compinit;compinit; $(declare -f compaudit);compaudit | xargs chown -R \"$(whoami)\""
+  logn 'Fix permissions on all files in /usr/local'
+  # Fix permissions on all files in /usr/local
+  sudo_askpass zsh -c "autoload -Uz compinstall; compinstall; autoload -Uz compinit;compinit; $(declare -f compaudit);compaudit | xargs chmod go-w"
+  logk
+  # -----------------------------------------------------------------
+
+  logn '(brew) Installing openssl readline sqlite3 xz zlib tcl-tk'
+  brew install openssl readline sqlite3 xz zlib tcl-tk asdf pkg-config autogen bash bzip2 libffi cheat cmake python@3.10 curl diff-so-fancy direnv fd gnutls findutils fnm fpp fzf gawk gcc gh git gnu-indent gnu-sed gnu-tar grep gzip hub jq less lesspipe libxml2 lsof luarocks luv moreutils neofetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper ruby-build rbenv reattach-to-user-namespace ripgrep rsync screen screenfetch shellcheck shfmt unzip urlview vim watch wget zlib zsh
+  logk
+
+  # Check and install any remaining software updates.
+  logn "Checking for software updates:"
+  if softwareupdate -l 2>&1 | grep "No new software available."; then
+    logk
+  else
+    echo
+    log "Installing software updates:"
+    if [ -z "$ZSH_DOTFILES_PREP_CI" ]; then
+      sudo_askpass softwareupdate --install --all
+      xcode_license
+      logk
+    else
+      echo "SKIPPED (for CI)"
+    fi
+  fi
+
+  # Setup Brewfile
+  if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && { [ ! -f "$HOME/.Brewfile" ] || [ "$HOME/.Brewfile" -ef "$HOME/.homebrew-brewfile/Brewfile" ]; }; then
+    HOMEBREW_BREWFILE_URL="https://github.com/$ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile"
+
+    if git ls-remote "$HOMEBREW_BREWFILE_URL" &>/dev/null; then
+      log "Fetching $ZSH_DOTFILES_PREP_GITHUB_USER/homebrew-brewfile from GitHub:"
+      if [ ! -d "$HOME/.homebrew-brewfile" ]; then
+        log "Cloning to ~/.homebrew-brewfile:"
+        git clone "$HOMEBREW_BREWFILE_URL" ~/.homebrew-brewfile
+        logk
+      else
+        (
+          cd ~/.homebrew-brewfile
+          git pull
+        )
+      fi
+      ln -sf ~/.homebrew-brewfile/Brewfile ~/.Brewfile
+      logk
+    fi
+  fi
+
+  # Install from local Brewfile
+  if [ -f "$HOME/.Brewfile" ]; then
+    log "Installing from user Brewfile on GitHub:"
+    brew bundle check --global || brew bundle --global
+    logk
+  fi
+
+fi
+
+logn "Make local bin paths"
+mkdir -pv ~/bin || true
+mkdir -pv ~/.bin || true
+mkdir -pv ~/.local/bin || true
+mkdir -pv ~/.local/src || true
+
+add_helper_functions_to_bashrc() {
+  # shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double quotes for that.
+  local this_script='$HOME/compat.bash'
+
+  # Add helper functions to profile
+  local source_line="[ -f \"${this_script}\" ] && eval (<\"${this_script}\")"
+  if ! grep -q "${this_script}" ~/.bashrc; then
+    echo "Adding helper functions to ~/.bashrc"
+    echo "${source_line}" >>~/.bashrc
+  fi
+}
+
+add_helper_functions_to_profile() {
+  # shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double quotes for that.
+  local this_script='$HOME/compat.sh'
+
+  # Add helper functions to profile
+  local source_line="[ -f \"${this_script}\" ] && eval (<\"${this_script}\")"
+  if ! grep -q "${this_script}" ~/.profile; then
+    echo "Adding helper functions to ~/.profile"
+    echo "${source_line}" >>~/.profile
+  fi
+}
+
+add_helper_functions_to_shells() {
+  add_helper_functions_to_bashrc
+  add_helper_functions_to_profile
+}
+
+# ---------------------------------------------------------
+# Setup compat files which will be used in .profile .bashrc .zshrc etc
+# ---------------------------------------------------------
+# mac version
+
+if [ "$CURRENT_OS" = "macos" ]; then
+  cat <<'EOF' >~/compat.bash
+  # ---------------------------------------------------------
+  # chezmoi managed - ~/.bashrc
+  # ---------------------------------------------------------
+  # homebrew var setup
+  UNAME_MACHINE="$(/usr/bin/uname -m)"
+  if [[ $UNAME_MACHINE == "arm64" ]]; then
+    HOMEBREW_PREFIX="/opt/homebrew"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+  else
+    HOMEBREW_PREFIX="/usr/local"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+  fi
+
+
+  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+  export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
+  # export PATH="/usr/local/cuda/bin:${PATH}"
+  # export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
+  # export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+
+  [ -f ~/.fzf.bash ] && . ~/.fzf.bash
+
+  . "$HOME/.cargo/env"
+
+
+  ######################################################################################
+  # pyenv
+  ######################################################################################
+  export PYENV_ROOT=~/.pyenv
+  export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
+  OPT_HOMEBREW="${HOMEBREW_PREFIX}"
+  if [ -s "$OPT_HOMEBREW"/bin/brew ]; then
+      eval "$($OPT_HOMEBREW/bin/brew shellenv)"
+  fi
+
+  if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
+    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
+    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
+    fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
+    pyenv virtualenvwrapper_lazy
+
+  elif [ -s "$HOME/.pyenv/bin/pyenv" ]; then
+    export PYENV_ROOT=~/.pyenv
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$($HOME/.pyenv/bin/pyenv init --path)"
+    eval "$($HOME/.pyenv/bin/pyenv init -)"
+    # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
+  fi
+  ######################################################################################
+
+  OS="`uname`"
+  case $OS in
+    'Linux')
+      OS='Linux'
+      ;;
+    'FreeBSD')
+      OS='FreeBSD'
+      ;;
+    'WindowsNT')
+      OS='Windows'
+      ;;
+    'Darwin')
+      OS='Mac'
+      ;;
+    'SunOS')
+      OS='Solaris'
+      ;;
+    *) ;;
+  esac
+
+  if [ "$OS" = 'Linux' ]
+  then
+      export ASDF_DIR="${HOME}/.asdf"
+      . "$HOME/.asdf/asdf.sh"
+      . "$HOME/.asdf/lib/asdf.sh"
+      . "$HOME/.asdf/completions/asdf.bash"
+  fi
+
+  # fnm
+  export PATH="$HOME/.local/share/fnm:$PATH"
+  eval "`fnm env`"
+EOF
+
+  cat <<'EOF' >~/compat.sh
+  # ---------------------------------------------------------
+  # chezmoi managed - ~/.bashrc
+  # ---------------------------------------------------------
+  # homebrew var setup
+  UNAME_MACHINE="$(/usr/bin/uname -m)"
+  if [ "$UNAME_MACHINE" = "arm64" ]
+  then
+    HOMEBREW_PREFIX="/opt/homebrew"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+  else
+    HOMEBREW_PREFIX="/usr/local"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+  fi
+
+
+  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+  export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
+  # export PATH="/usr/local/cuda/bin:${PATH}"
+  # export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
+  # export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+
+  if [ -f "$HOME/.fzf.bash" ]
+  then
+    source ~/.fzf.bash
+  fi
+
+  if [ -f "$HOME/.cargo/env" ]
+  then
+    source ~/.fzf.bash
+  fi
+
+
+  ######################################################################################
+  # pyenv
+  ######################################################################################
+  export PYENV_ROOT=~/.pyenv
+  export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
+  OPT_HOMEBREW="${HOMEBREW_PREFIX}"
+  if [ -s "$OPT_HOMEBREW"/bin/brew ]
+  then
+      eval "$($OPT_HOMEBREW/bin/brew shellenv)"
+  fi
+
+  if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
+    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
+    eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
+    fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
+    pyenv virtualenvwrapper_lazy
+
+  elif [ -s "$HOME/.pyenv/bin/pyenv" ]
+  then
+    export PYENV_ROOT=~/.pyenv
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$($HOME/.pyenv/bin/pyenv init --path)"
+    eval "$($HOME/.pyenv/bin/pyenv init -)"
+    # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
+  fi
+  ######################################################################################
+
+  OS="`uname`"
+  case $OS in
+    'Linux')
+      OS='Linux'
+      ;;
+    'FreeBSD')
+      OS='FreeBSD'
+      ;;
+    'WindowsNT')
+      OS='Windows'
+      ;;
+    'Darwin')
+      OS='Mac'
+      ;;
+    'SunOS')
+      OS='Solaris'
+      ;;
+    *) ;;
+  esac
+
+  if [ "$OS" = 'Linux' ]
+  then
+      export ASDF_DIR="${HOME}/.asdf"
+      . "$HOME/.asdf/asdf.sh"
+      . "$HOME/.asdf/lib/asdf.sh"
+      . "$HOME/.asdf/completions/asdf.bash"
+  fi
+
+  # fnm
+  export PATH="$HOME/.local/share/fnm:$PATH"
+  eval "`fnm env`"
+EOF
+
+  add_helper_functions_to_shells
+
+  # shellcheck source=/dev/null
+  source "${HOME}/compat.bash"
+
+fi
+
+# ---------------------------------------------------------
+# chezmoi managed - end
+# ---------------------------------------------------------
+
+# ---------------------------------------------------------
+# Brew asdf setup
+# ---------------------------------------------------------
+# echo -e "\n. $(brew --prefix asdf)/libexec/asdf.sh" >> ~/.zshrc
+
+#  SC1091: Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+# shellcheck source=/dev/null
+# shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+# shellcheck disable=SC2046  # Quote this to prevent word splitting.
+. $(brew --prefix asdf)/libexec/asdf.sh
+asdf current
+
+# ---------------------------------------------------------
+# Brew fzf setup
+# ---------------------------------------------------------
+# shellcheck source=/dev/null
+# shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+# shellcheck disable=SC2046  # Quote this to prevent word splitting.
+$(brew --prefix)/opt/fzf/install --all
+ls -lta ~/.fzf.bash
+ls -lta ~/.fzf.zsh
+
+# ---------------------------------------------------------
+# Brew python install
+# ---------------------------------------------------------
+install_global_python() {
+  brew_install_all python3 python-tk python@3.10 python-tk@3.10
+  pip install --upgrade "setuptools<60" wheel
+  python -m ensurepip --upgrade
+  pip install --upgrade pip 2>&1 | grep -v "DEPRECATION:"
+  # pip install --upgrade pipx 2>&1 | grep -v "DEPRECATION:"
+  # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
+
+}
+# install_global_python
+
+# ---------------------------------------------------------
+# Install cargo, volta
+# ---------------------------------------------------------
+# SOURCE: https://github.com/radiol/dotfiles/blob/610fc7898d47252cd7eaf41662e5558d7eac645f/run_once_install.sh.tmpl#L140
+# Install Rust
+if ! (type "cargo" >/dev/null 2>&1); then
+  curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
+  sh rustup.sh -y -q --no-modify-path && rm rustup.sh
+  # shellcheck source=/dev/null
+  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
+  source "$HOME/.cargo/env"
+  # Install Rust Apps
+  # cargo install -q cargo-update
+fi
+
+# ---------------------------------------------------------
+# Chezmoi
+# ---------------------------------------------------------
+# shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+# shellcheck disable=SC2046  # Quote this to prevent word splitting.
+# shellcheck disable=SC2086  # Quote this to prevent word splitting.
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b $HOME/bin -t v2.31.1
+
+logn 'You are ready to run zsh-dotfiles. Run: chezmoi init -R --debug -v --apply https://github.com/bossjones/zsh-dotfiles.git"'
+
+## ------------------------------------------------------
