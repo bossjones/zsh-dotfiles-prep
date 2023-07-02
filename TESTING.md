@@ -73,3 +73,80 @@ pis-Mac:~ pi$
 
 ```
 
+# asdf info
+
+```
+pis-Mac:~ pi$ asdf info
+OS:
+Darwin pis-Mac.local 21.6.0 Darwin Kernel Version 21.6.0: Mon Apr 24 21:10:53 PDT 2023; root:xnu-8020.240.18.701.5~1/RELEASE_X86_64 x86_64
+
+SHELL:
+zsh 5.8.1 (x86_64-apple-darwin21.0)
+
+BASH VERSION:
+5.2.15(1)-release
+
+ASDF VERSION:
+v0.12.0
+
+ASDF INTERNAL VARIABLES:
+ASDF_DEFAULT_TOOL_VERSIONS_FILENAME=.tool-versions
+ASDF_DATA_DIR=/Users/pi/.asdf
+ASDF_DIR=/usr/local/Cellar/asdf/0.12.0/libexec
+ASDF_CONFIG_FILE=/Users/pi/.asdfrc
+
+No plugins installed
+ASDF INSTALLED PLUGINS:
+
+
+pis-Mac:~ pi$
+```
+
+# pyenv
+
+```
+pi@pis-Mac ~/.local/share/chezmoi feature-macos
+❯ python -c "import sys;print(sys.executable)"
+/Users/pi/.pyenv/versions/3.10.12/bin/python
+```
+
+# fnm
+
+```
+pi@pis-Mac ~/.local/share/chezmoi feature-macos
+❯ fnm env
+export PATH="/Users/pi/Library/Caches/fnm_multishells/98284_1688335764845/bin":$PATH
+export FNM_DIR="/Users/pi/Library/Application Support/fnm"
+export FNM_LOGLEVEL="info"
+export FNM_ARCH="x64"
+export FNM_NODE_DIST_MIRROR="https://nodejs.org/dist"
+export FNM_MULTISHELL_PATH="/Users/pi/Library/Caches/fnm_multishells/98284_1688335764845"
+export FNM_VERSION_FILE_STRATEGY="local"
+rehash
+```
+
+# fnm env
+
+```
+pi@pis-Mac ~/.local/share/chezmoi feature-macos
+❯ fnm env --use-on-cd
+export PATH="/Users/pi/Library/Caches/fnm_multishells/99750_1688336380148/bin":$PATH
+export FNM_NODE_DIST_MIRROR="https://nodejs.org/dist"
+export FNM_VERSION_FILE_STRATEGY="local"
+export FNM_DIR="/Users/pi/Library/Application Support/fnm"
+export FNM_LOGLEVEL="info"
+export FNM_ARCH="x64"
+export FNM_MULTISHELL_PATH="/Users/pi/Library/Caches/fnm_multishells/99750_1688336380148"
+autoload -U add-zsh-hook
+_fnm_autoload_hook () {
+    if [[ -f .node-version || -f .nvmrc ]]; then
+    fnm use --silent-if-unchanged
+fi
+
+}
+
+add-zsh-hook chpwd _fnm_autoload_hook \
+    && _fnm_autoload_hook
+
+rehash
+```

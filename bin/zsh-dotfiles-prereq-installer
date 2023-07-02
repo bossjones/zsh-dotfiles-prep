@@ -637,7 +637,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
   logk
 
   logn '(brew) Installing openssl readline sqlite3 xz zlib tcl-tk'
-  brew install openssl readline sqlite3 xz zlib tcl-tk asdf pkg-config autogen bash bzip2 libffi cheat cmake python@3.10 curl diff-so-fancy direnv fd gnutls findutils fnm fpp fzf gawk gcc gh git gnu-indent gnu-sed gnu-tar grep gzip hub jq less lesspipe libxml2 lsof luarocks luv moreutils neofetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper ruby-build rbenv reattach-to-user-namespace ripgrep rsync screen screenfetch shellcheck shfmt unzip urlview vim watch wget zlib zsh
+  brew install openssl readline sqlite3 xz zlib tcl-tk asdf pkg-config autogen bash bzip2 libffi cheat cmake python@3.10 curl diff-so-fancy direnv fd gnutls findutils fnm fpp fzf gawk gcc gh git gnu-indent gnu-sed gnu-tar grep gzip hub jq less lesspipe libxml2 lsof luarocks luv moreutils neofetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper ruby-build rbenv reattach-to-user-namespace ripgrep rsync screen screenfetch shellcheck shfmt unzip urlview vim watch wget zlib zsh openssl@1.1
   logk
 
   if [ "$ZSH_DOTFILES_PREP_SKIP_SOFTWARE_UPDATES" = "1" ]; then
@@ -747,18 +747,18 @@ if ! (type "cargo" >/dev/null 2>&1); then
   logk
 fi
 
-# logn "asdf update dir ~/.asdf"
-# if [ ! -d "$HOME/.asdf" ]; then
-#   log "Cloning to ~/.asdf:"
-#   git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.12.0
-#   logk
-# else
-#   (
-#     cd ~/.asdf
-#     git pull
-#   )
-# fi
-# logk
+logn "asdf update dir ~/.asdf"
+if [ ! -d "$HOME/.asdf" ]; then
+  log "Cloning to ~/.asdf:"
+  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.11.2
+  logk
+else
+  (
+    cd ~/.asdf
+    git pull
+  )
+fi
+logk
 
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
@@ -881,7 +881,7 @@ fi
 
 if [ -f "$HOME/.cargo/env" ]
 then
-  source ~/.fzf.bash
+  . "$HOME/.cargo/env"
 fi
 
 
@@ -996,13 +996,19 @@ install_global_python() {
 }
 install_global_python
 
+env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
+pyenv global 3.10.12
+
+eval "$(fnm env --use-on-cd)"
+fnm install v18.16.1 || true
+
 # ---------------------------------------------------------
 # Chezmoi
 # ---------------------------------------------------------
 # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
 # shellcheck disable=SC2046  # Quote this to prevent word splitting.
 # shellcheck disable=SC2086  # Quote this to prevent word splitting.
-sh -c "$(curl -fsLS get.chezmoi.io)" -- -b $HOME/bin -t v2.31.1
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b $HOME/.bin -t v2.31.1
 
 logn 'You are ready to run zsh-dotfiles. Run: chezmoi init -R --debug -v --apply https://github.com/bossjones/zsh-dotfiles.git"'
 
