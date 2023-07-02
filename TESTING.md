@@ -150,3 +150,86 @@ add-zsh-hook chpwd _fnm_autoload_hook \
 
 rehash
 ```
+
+# echo fpath
+
+```
+pi@pis-Mac ~/.local/share/chezmoi feature-macos
+❯ echo $fpath | tr ' ' '\n'
+/Users/pi/.sheldon/repos/github.com/ohmyzsh/ohmyzsh/functions
+/Users/pi/.sheldon/repos/github.com/ohmyzsh/ohmyzsh/completions
+/Users/pi/.sheldon/repos/github.com/ohmyzsh/ohmyzsh/cache/completions
+/usr/local/opt/pyenv/completions
+/Users/pi/.asdf/completions
+/usr/local/share/zsh/site-functions
+/usr/local/Cellar/zsh/5.9/share/zsh/functions
+/Users/pi/.sheldon/repos/github.com/zsh-users/zsh-completions/src
+/Users/pi/.zsh/completions
+/Users/pi/.sheldon/repos/github.com/zdharma-continuum/fast-syntax-highlighting
+```
+
+# echo zshrc
+
+```
+pi@pis-Mac ~/.local/share/chezmoi feature-macos
+❯ cat ~/.zshrc
+#!/usr/bin/env zsh
+
+# Uncomment to profile startup
+# zmodload zsh/zprof
+
+if [[ "$OSTYPE" == linux* ]]; then
+    # XDG configuration for linux
+    export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+    export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+fi
+
+# Makes path a unique array preventing duplicates
+typeset -U path
+typeset -U fpath
+# typeset -U cdpath
+# typeset -U mailpath
+
+# Source sheldon plugins
+source "/Users/pi/.sheldon/repos/github.com/zsh-users/zsh-completions/zsh-completions.plugin.zsh"
+source "/Users/pi/.sheldon/repos/github.com/sindresorhus/pure/async.zsh"
+source "/Users/pi/.sheldon/repos/github.com/sindresorhus/pure/pure.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/asdf/env.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/centos/env.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/cheat/env.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/direnv/env.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/env.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/fzf/env.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/gpg/env.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/invokeai/env.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/pyenv/env.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/asdf/path.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/centos/path.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/fzf/path.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/path.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/pyenv/path.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/rust/path.zsh"
+source "/Users/pi/.sheldon/repos/github.com/romkatv/zsh-defer/zsh-defer.plugin.zsh"
+zsh-defer source "/Users/pi/.local/share/chezmoi/home/shell/config.zsh"
+source "/Users/pi/.local/share/chezmoi/home/shell/config.zsh"
+zsh-defer source "/Users/pi/.local/share/chezmoi/home/shell/brew/completion.zsh"
+zsh-defer source "/Users/pi/.local/share/chezmoi/home/shell/chezmoi/completion.zsh"
+zsh-defer source "/Users/pi/.local/share/chezmoi/home/shell/fzf/completion.zsh"
+zsh-defer source "/Users/pi/.local/share/chezmoi/home/shell/fzf/keybinding.zsh"
+zsh-defer source "/Users/pi/.local/share/chezmoi/home/shell/keybinding.zsh"
+zsh-defer source "/Users/pi/.sheldon/repos/github.com/MichaelAquilina/zsh-you-should-use/zsh-you-should-use.plugin.zsh"
+source "/Users/pi/.sheldon/repos/github.com/ohmyzsh/ohmyzsh/oh-my-zsh.sh"
+zsh-defer source "/Users/pi/.sheldon/repos/github.com/ohmyzsh/ohmyzsh/plugins/fancy-ctrl-z/fancy-ctrl-z.plugin.zsh"
+zsh-defer source "/Users/pi/.sheldon/repos/github.com/bossjones/boss-git-zsh-plugin/boss-git.plugin.zsh"
+zsh-defer source "/Users/pi/.sheldon/repos/github.com/zsh-users/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh"
+source "/Users/pi/.sheldon/repos/github.com/zsh-users/zsh-autosuggestions/zsh-autosuggestions.zsh"
+source "/Users/pi/.sheldon/repos/github.com/zsh-hooks/zsh-hooks/zsh-hooks.plugin.zsh"
+zsh-defer source "/usr/local/opt/asdf/libexec/asdf.sh"
+zsh-defer -t 0.5 source "/Users/pi/.sheldon/repos/github.com/urbainvaes/fzf-marks/fzf-marks.plugin.zsh"
+zsh-defer -t 0.5 source "/Users/pi/.sheldon/repos/github.com/zdharma-continuum/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
+zsh-defer -t 0.5 source "/Users/pi/.sheldon/repos/github.com/joel-porquet/zsh-dircolors-solarized/zsh-dircolors-solarized.zsh"
+zsh-defer source "/Users/pi/.local/share/chezmoi/home/shell/compinit.zsh"
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# ------
+
+```
