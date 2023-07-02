@@ -599,7 +599,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
   [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
   sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
 
-  if [ $HOMEBREW_PREFIX != $HOMEBREW_REPOSITORY ]; then
+  if [ "$HOMEBREW_PREFIX" != "$HOMEBREW_REPOSITORY" ]; then
     ln -sf "$HOMEBREW_REPOSITORY/bin/brew" "$HOMEBREW_PREFIX/bin/brew"
   fi
 
@@ -634,8 +634,13 @@ if [ "$CURRENT_OS" = "macos" ]; then
   brew install openssl readline sqlite3 xz zlib tcl-tk asdf pkg-config autogen bash bzip2 libffi cheat cmake python@3.10 curl diff-so-fancy direnv fd gnutls findutils fnm fpp fzf gawk gcc gh git gnu-indent gnu-sed gnu-tar grep gzip hub jq less lesspipe libxml2 lsof luarocks luv moreutils neofetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper ruby-build rbenv reattach-to-user-namespace ripgrep rsync screen screenfetch shellcheck shfmt unzip urlview vim watch wget zlib zsh
   logk
 
-  if [ "$ZSH_DOTFILES_PREP_SKIP_SOFTWARE_UPDATES" = "1" ]
-  then
+  logn '(brew) tap homebrew/core and homebrew/cask'
+  brew tap homebrew/core || true
+  logk
+  brew tap homebrew/cask || true
+  logk
+
+  if [ "$ZSH_DOTFILES_PREP_SKIP_SOFTWARE_UPDATES" = "1" ]; then
     logn 'skipping macos software updates for now ...'
   else
     # Check and install any remaining software updates.
@@ -655,8 +660,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
     fi
   fi
 
-  if [ "$ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE" = "1" ]
-  then
+  if [ "$ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE" = "1" ]; then
     logn 'skipping brew bundle install ...'
   else
     # Setup Brewfile
@@ -726,7 +730,6 @@ add_helper_functions_to_shells() {
   add_helper_functions_to_profile
 }
 
-
 # ---------------------------------------------------------
 # Install cargo, volta
 # ---------------------------------------------------------
@@ -756,7 +759,6 @@ else
   )
 fi
 logk
-
 
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
@@ -993,7 +995,6 @@ install_global_python() {
 
 }
 install_global_python
-
 
 # ---------------------------------------------------------
 # Chezmoi
