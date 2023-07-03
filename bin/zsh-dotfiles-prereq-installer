@@ -530,6 +530,7 @@ xcode_license() {
 if [ "$CURRENT_OS" = "macos" ]; then
   if [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
     echo "SKIPPED (for CI)"
+    logk
   else
     xcode_license
   fi
@@ -639,12 +640,19 @@ if [ "$CURRENT_OS" = "macos" ]; then
   logk
 
   logn '(brew) Installing openssl readline sqlite3 xz zlib tcl-tk'
-  brew install openssl readline sqlite3 xz zlib tcl-tk asdf pkg-config autogen bash bzip2 libffi cheat cmake python@3.10 curl diff-so-fancy direnv fd gnutls findutils fnm fpp fzf gawk gcc gh git gnu-indent gnu-sed gnu-tar grep gzip hub jq less lesspipe libxml2 lsof luarocks luv moreutils neofetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper ruby-build rbenv reattach-to-user-namespace ripgrep rsync screen screenfetch shellcheck shfmt unzip urlview vim watch wget zlib zsh openssl@1.1 git-delta || true
+  brew install openssl readline sqlite3 xz zlib tcl-tk asdf pkg-config autogen bash bzip2 libffi cheat cmake python@3.10 || true
+  logk
+  brew install curl diff-so-fancy direnv fd gnutls findutils fnm fpp fzf gawk gcc gh git gnu-indent gnu-sed gnu-tar grep gzip || true
+  logk
+  brew install hub jq less lesspipe libxml2 lsof luarocks luv moreutils neofetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper || true
+  logk
+  brew install ruby-build rbenv reattach-to-user-namespace ripgrep rsync screen screenfetch shellcheck shfmt unzip urlview vim watch wget zlib zsh openssl@1.1 git-delta || true
   brew install kadwanev/brew/retry
   logk
 
   if [ "$ZSH_DOTFILES_PREP_SKIP_SOFTWARE_UPDATES" = "1" ]; then
     logn 'skipping macos software updates for now ...'
+    logk
   else
     # Check and install any remaining software updates.
     logn "Checking for software updates:"
@@ -703,6 +711,7 @@ mkdir -pv ~/bin || true
 mkdir -pv ~/.bin || true
 mkdir -pv ~/.local/bin || true
 mkdir -pv ~/.local/src || true
+logk
 
 add_helper_functions_to_bashrc() {
   # shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double quotes for that.
@@ -731,7 +740,9 @@ add_helper_functions_to_profile() {
 
 add_helper_functions_to_shells() {
   add_helper_functions_to_bashrc
+  logk
   add_helper_functions_to_profile
+  logk
 }
 
 # ---------------------------------------------------------
@@ -754,13 +765,13 @@ fi
 logn "asdf update dir ~/.asdf"
 if [ ! -d "$HOME/.asdf" ]; then
   log "Cloning to ~/.asdf:"
-  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.11.2
+  git clone --verbose https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.11.2
   logk
-else
-  (
-    cd ~/.asdf
-    git pull
-  )
+# else
+#   (
+#     cd ~/.asdf
+#     git pull
+#   )
 fi
 logk
 
