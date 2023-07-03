@@ -616,7 +616,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # Update Homebrew.
   export PATH="$HOMEBREW_PREFIX/bin:$PATH"
   logn "Updating Homebrew:"
-  brew update --quiet
+  brew update --quiet || true
   logk
 
   # -----------------------------------------------------------------
@@ -961,46 +961,50 @@ fi
 # chezmoi managed - end
 # ---------------------------------------------------------
 
-# ---------------------------------------------------------
-# Brew asdf setup
-# ---------------------------------------------------------
-# echo -e "\n. $(brew --prefix asdf)/libexec/asdf.sh" >> ~/.zshrc
+if [ "$CURRENT_OS" = "macos" ]; then
+  # ---------------------------------------------------------
+  # Brew asdf setup
+  # ---------------------------------------------------------
+  # echo -e "\n. $(brew --prefix asdf)/libexec/asdf.sh" >> ~/.zshrc
 
-#  SC1091: Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
-# shellcheck source=/dev/null
-# shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
-# shellcheck disable=SC2046  # Quote this to prevent word splitting.
-. $(brew --prefix asdf)/libexec/asdf.sh
-asdf current
-logk
+  #  SC1091: Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+  # shellcheck source=/dev/null
+  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
+  . $(brew --prefix asdf)/libexec/asdf.sh
+  asdf current
+  logk
 
-# ---------------------------------------------------------
-# Brew fzf setup
-# ---------------------------------------------------------
-# shellcheck source=/dev/null
-# shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
-# shellcheck disable=SC2046  # Quote this to prevent word splitting.
-$(brew --prefix)/opt/fzf/install --all
-ls -lta ~/.fzf.bash
-ls -lta ~/.fzf.zsh
-logk
+  # ---------------------------------------------------------
+  # Brew fzf setup
+  # ---------------------------------------------------------
+  # shellcheck source=/dev/null
+  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
+  $(brew --prefix)/opt/fzf/install --all
+  ls -lta ~/.fzf.bash
+  ls -lta ~/.fzf.zsh
+  logk
 
-# ---------------------------------------------------------
-# Brew python install
-# ---------------------------------------------------------
-install_global_python() {
-  brew install python3 python-tk python@3.11 python-tk@3.11
-  python3 -m ensurepip --upgrade
-  pip3 install --upgrade "setuptools<60" wheel
-  pip3 install --upgrade pip 2>&1 | grep -v "DEPRECATION:"
-  # pip install --upgrade pipx 2>&1 | grep -v "DEPRECATION:"
-  # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
 
-}
-install_global_python
+  # ---------------------------------------------------------
+  # Brew python install
+  # ---------------------------------------------------------
+  install_global_python() {
+    brew install python3 python-tk python@3.11 python-tk@3.11
+    python3 -m ensurepip --upgrade
+    pip3 install --upgrade "setuptools<60" wheel
+    pip3 install --upgrade pip 2>&1 | grep -v "DEPRECATION:"
+    # pip install --upgrade pipx 2>&1 | grep -v "DEPRECATION:"
+    # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
 
-env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
-pyenv global 3.10.12
+  }
+  install_global_python
+
+  env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
+  pyenv global 3.10.12
+
+fi
 
 eval "$(fnm env --use-on-cd)"
 fnm install v18.16.1 || true

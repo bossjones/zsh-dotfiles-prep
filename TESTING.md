@@ -233,3 +233,8 @@ zsh-defer source "/Users/pi/.local/share/chezmoi/home/shell/compinit.zsh"
 # ------
 
 ```
+
+https://scriptingosx.com/2019/06/moving-to-zsh-part-2-configuration-files/
+https://scriptingosx.com/2019/06/moving-to-zsh-part-3-shell-options/
+https://scriptingosx.com/2019/06/moving-to-zsh/
+https://scriptingosx.com/2019/07/moving-to-zsh-part-4-aliases-and-functions/
