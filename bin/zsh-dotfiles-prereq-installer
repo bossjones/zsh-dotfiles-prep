@@ -665,6 +665,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
 
   if [ "$ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE" = "1" ]; then
     logn 'skipping brew bundle install ...'
+    logk
   else
     # Setup Brewfile
     if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && { [ ! -f "$HOME/.Brewfile" ] || [ "$HOME/.Brewfile" -ef "$HOME/.homebrew-brewfile/Brewfile" ]; }; then
