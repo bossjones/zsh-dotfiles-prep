@@ -777,6 +777,29 @@ if [ ! -d "$HOME/.asdf" ]; then
 fi
 logk
 
+logn "ubuntu needs the following tools installed manually, namely fnm and pyenv"
+# Get the name of the operating system
+os_name=$(cat /etc/os-release | grep -oP '^NAME="\K[^"]+')
+if [ "${os_name}" = "Ubuntu" ]; then
+  log "installing fnm ..."
+  FNM_BIN="$(which fnm)"
+  if [ -x "$FNM_BIN" ]; then
+    curl -fsSL https://fnm.vercel.app/install | bash
+  fi
+  logk
+
+  # pyenv
+  if [ ! -d "${HOME}/.pyenv" ]; then
+    log "installing pyenv ..."
+    curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+    logk
+    export PATH="$HOME/.pyenv/bin:$PATH"
+    pyenv install 3.10.9
+    logk
+  fi
+fi
+logk
+
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
 # ---------------------------------------------------------
