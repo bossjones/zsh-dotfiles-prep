@@ -754,8 +754,8 @@ os_name=$(cat /etc/os-release | grep -oP '^NAME="\K[^"]+')
 set +e
 if [ "${os_name}" = "Ubuntu" ]; then
   log "installing build-essentials ..."
-  sudo apt update &&
-    sudo apt install build-essential libssl-dev zlib1g-dev \
+  sudo_askpass apt update &&
+    sudo_askpass apt install build-essential libssl-dev zlib1g-dev \
       libbz2-dev libreadline-dev libsqlite3-dev curl \
       libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev unzip -y
   logk
