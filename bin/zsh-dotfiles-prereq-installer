@@ -784,12 +784,10 @@ if [ "${os_name}" = "Ubuntu" ]; then
   if [ ! -d "${HOME}/.fnm" ]; then
     logn "ubuntu needs the following tools installed manually, namely fnm and pyenv"
     log "installing fnm ..."
-    FNM_BIN="$(which fnm)"
-    if [ -x "$FNM_BIN" ]; then
-      curl -fsSL https://fnm.vercel.app/install | bash
-    fi
+    curl -fsSL https://fnm.vercel.app/install | bash
     logk
   fi
+  logk
 
   # pyenv
   if [ ! -d "${HOME}/.pyenv" ]; then
