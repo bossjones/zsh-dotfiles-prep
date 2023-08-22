@@ -793,7 +793,7 @@ if [ "${os_name}" = "Ubuntu" ]; then
   if [ ! -d "${HOME}/.pyenv" ]; then
     log "installing pyenv ..."
     sudo apt update
-    sudo apt install build-essential libssl-dev zlib1g-dev \
+    sudo apt install -y build-essential libssl-dev zlib1g-dev \
       libbz2-dev libreadline-dev libsqlite3-dev curl \
       libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
@@ -1165,7 +1165,7 @@ fnm install v18.16.1 || true
 # shellcheck disable=SC2046  # Quote this to prevent word splitting.
 # shellcheck disable=SC2086  # Quote this t"o pre"vent word splitting.
 log "installing chezmoi ..."
-sh -c "$(curl -fsLS get.chezmoi.io)" -- -b $HOME/.bin -t v2.31.1
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME"/.bin -t v2.31.1
 
 logn 'You are ready to run zsh-dotfiles. Run: chezmoi init -R --debug -v --apply https://github.com/bossjones/zsh-dotfiles.git"'
 
