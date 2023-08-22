@@ -779,6 +779,7 @@ logk
 
 # Get the name of the operating system
 os_name=$(cat /etc/os-release | grep -oP '^NAME="\K[^"]+')
+set +e
 if [ "${os_name}" = "Ubuntu" ]; then
   logn "ubuntu needs the following tools installed manually, namely fnm and pyenv"
   log "installing fnm ..."
@@ -801,6 +802,7 @@ if [ "${os_name}" = "Ubuntu" ]; then
 
 fi
 logk
+set -e
 
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
