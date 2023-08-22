@@ -1172,6 +1172,6 @@ log "installing chezmoi ..."
 sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME"/.bin -t v2.31.1
 
 logn 'You are ready to run zsh-dotfiles. Run: chezmoi init -R --debug -v --apply https://github.com/bossjones/zsh-dotfiles.git"'
-logok
+logk
 
 ## ------------------------------------------------------
