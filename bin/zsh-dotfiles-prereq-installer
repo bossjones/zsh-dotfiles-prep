@@ -797,6 +797,8 @@ if [ "${os_name}" = "Ubuntu" ]; then
     pyenv install 3.10.9
     logk
   fi
+  logk
+
 fi
 logk
 
