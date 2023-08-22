@@ -750,12 +750,13 @@ add_helper_functions_to_shells() {
 # make sure deps are present first
 
 # Get the name of the operating system
+# shellcheck disable=SC2002  # Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead
 os_name=$(cat /etc/os-release | grep -oP '^NAME="\K[^"]+')
 set +e
 if [ "${os_name}" = "Ubuntu" ]; then
   log "installing build-essentials ..."
   sudo_askpass apt update &&
-    sudo_askpass apt install build-essential libssl-dev zlib1g-dev \
+    sudo_askpass apt install build-essential libssl-dev zlib1g-dev cmake \
       libbz2-dev libreadline-dev libsqlite3-dev curl \
       libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev unzip -y
   logk
