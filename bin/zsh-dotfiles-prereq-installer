@@ -777,10 +777,10 @@ if [ ! -d "$HOME/.asdf" ]; then
 fi
 logk
 
-logn "ubuntu needs the following tools installed manually, namely fnm and pyenv"
 # Get the name of the operating system
 os_name=$(cat /etc/os-release | grep -oP '^NAME="\K[^"]+')
 if [ "${os_name}" = "Ubuntu" ]; then
+  logn "ubuntu needs the following tools installed manually, namely fnm and pyenv"
   log "installing fnm ..."
   FNM_BIN="$(which fnm)"
   if [ -x "$FNM_BIN" ]; then
@@ -993,7 +993,6 @@ EOF
   logk
 
 fi
-
 
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
