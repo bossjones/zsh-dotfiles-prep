@@ -750,36 +750,39 @@ add_helper_functions_to_shells() {
 # make sure deps are present first
 
 # Get the name of the operating system
-# shellcheck disable=SC2002  # Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead
-os_name=$(cat /etc/os-release | grep -oP '^NAME="\K[^"]+')
-set +e
-if [ "${os_name}" = "Ubuntu" ]; then
-  log "installing build-essentials ..."
-  sudo_askpass apt update &&
-    sudo_askpass apt install build-essential libssl-dev zlib1g-dev cmake \
-      libbz2-dev libreadline-dev libsqlite3-dev curl \
-      libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev unzip -y
-  logk
-  if [ ! -d "${HOME}/.fnm" ]; then
-    logn "ubuntu needs the following tools installed manually, namely fnm and pyenv"
-    log "installing fnm ..."
-    curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell
+if [ "$CURRENT_OS" = "linux" ]; then
+  # shellcheck disable=SC2002  # Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead
+  os_name=$(cat /etc/os-release | grep -oP '^NAME="\K[^"]+')
+  set +e
+  if [ "${os_name}" = "Ubuntu" ]; then
+    log "installing build-essentials ..."
+    sudo_askpass apt update &&
+      sudo_askpass apt install build-essential libssl-dev zlib1g-dev cmake \
+        libbz2-dev libreadline-dev libsqlite3-dev curl \
+        libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev unzip -y
     logk
+    if [ ! -d "${HOME}/.fnm" ]; then
+      logn "ubuntu needs the following tools installed manually, namely fnm and pyenv"
+      log "installing fnm ..."
+      curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell
+      logk
+    fi
+    logk
+
+    # pyenv
+    if [ ! -d "${HOME}/.pyenv" ]; then
+      log "installing pyenv ..."
+      curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+      logk
+      export PATH="$HOME/.pyenv/bin:$PATH"
+      env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
+      pyenv global 3.10.12
+      logk
+    fi
+    logk
+
   fi
   logk
-
-  # pyenv
-  if [ ! -d "${HOME}/.pyenv" ]; then
-    log "installing pyenv ..."
-    curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
-    logk
-    export PATH="$HOME/.pyenv/bin:$PATH"
-    env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
-    pyenv global 3.10.12
-    logk
-  fi
-  logk
-
 fi
 logk
 set -e
