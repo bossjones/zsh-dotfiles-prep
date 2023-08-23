@@ -633,11 +633,11 @@ if [ "$CURRENT_OS" = "macos" ]; then
   logk
   # -----------------------------------------------------------------
 
-  logn '(brew) tap homebrew/core and homebrew/cask'
-  brew tap homebrew/cask || true
-  logk
-  brew tap homebrew/core || true
-  logk
+  # logn '(brew) tap homebrew/core and homebrew/cask'
+  # brew tap homebrew/cask || true
+  # logk
+  # brew tap homebrew/core || true
+  # logk
   brew tap schniz/tap || true
   logk
 
