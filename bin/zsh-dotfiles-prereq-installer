@@ -1157,10 +1157,34 @@ if [ "$CURRENT_OS" = "macos" ]; then
     # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
 
   }
-  install_global_python
+  time install_global_python
+
+  # calc time difference
+  # SOURCE: https://stackoverflow.com/questions/1092631/get-current-time-in-seconds-since-the-epoch-on-linux-bash
+  datetime1=$(date +%s)
 
   env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
+
+  datetime2=$(date +%s)
+
+  # ksh93 string manipulation (also available in bash, zsh and
+  # recent versions of mksh)
+  datestamp1="${datetime1:0:4}-${datetime1:4:2}-${datetime1:6:2} ${datetime1:8:2}:${datetime1:10:2}:${datetime1:12:2}"
+  datestamp2="${datetime2:0:4}-${datetime2:4:2}-${datetime2:6:2} ${datetime2:8:2}:${datetime2:10:2}:${datetime2:12:2}"
+
+  # otherwise use sed
+  # datestamp1=$(echo "$datetime1" | sed -nE 's/(....)(..)(..)(..)(..)(..)/\1-\2-\3 \4:\5:\6/p')
+  # datestamp2=$(echo "$datetime2" | sed -nE 's/(....)(..)(..)(..)(..)(..)/\1-\2-\3 \4:\5:\6/p')
+
+  seconds1=$(date --date "$datestamp1" +%s)
+  seconds2=$(date --date "$datestamp2" +%s)
+
+  # standard sh integer arithmetics
+  delta=$((seconds1 - seconds2))
+  echo "$delta seconds" # "45197940 seconds"
+
   pyenv global 3.10.12
+  logk
 
 fi
 
