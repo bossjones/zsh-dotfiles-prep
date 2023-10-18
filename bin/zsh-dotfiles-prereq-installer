@@ -1161,11 +1161,11 @@ if [ "$CURRENT_OS" = "macos" ]; then
 
   # calc time difference
   # SOURCE: https://stackoverflow.com/questions/1092631/get-current-time-in-seconds-since-the-epoch-on-linux-bash
-  datetime1=$(date +%s)
+  datetime1=$(date +'%s')
 
   env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
 
-  datetime2=$(date +%s)
+  datetime2=$(date +'%s')
 
   # ksh93 string manipulation (also available in bash, zsh and
   # recent versions of mksh)
