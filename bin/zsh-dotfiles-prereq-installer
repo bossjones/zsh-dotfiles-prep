@@ -1157,19 +1157,22 @@ if [ "$CURRENT_OS" = "macos" ]; then
     # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
 
   }
-  log "installing global python via brew ..."
+  logn "installing global python via brew ..."
   time install_global_python
   logk
 
   log "installing pyenv version of python"
   env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
   pyenv global 3.10.12
+  logn 'pyenv installed 3.10.12...'
   logk
 
 fi
 
+logn 'fnm setup..'
 eval "$(fnm env --use-on-cd)"
 fnm install v18.16.1 || true
+logk
 
 # ---------------------------------------------------------
 # Chezmoi
@@ -1178,7 +1181,8 @@ fnm install v18.16.1 || true
 # shellcheck disable=SC2046  # Quote this to prevent word splitting.
 # shellcheck disable=SC2086  # Quote this t"o pre"vent word splitting.
 log "installing chezmoi ..."
-sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME"/.bin -t v2.31.1
+sh -cx "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME"/.bin -t v2.31.1
+logk
 
 logn 'You are ready to run zsh-dotfiles. Run: chezmoi init -R --debug -v --apply https://github.com/bossjones/zsh-dotfiles.git"'
 logk
