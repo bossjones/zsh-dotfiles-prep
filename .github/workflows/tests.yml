@@ -85,9 +85,10 @@ jobs:
         if: matrix.setup.os == 'macos-12'
         continue-on-error: true
 
-      - run: brew doctor
+      - run: brew doctor || true
         if: matrix.setup.os == 'macos-12'
+        continue-on-error: true
 
       - name: Install Ruby dependencies
-        run: brew install gmp openssl@1.1 libyaml
+        run: brew install gmp openssl@1.1 libyaml openssl@3
         if: matrix.setup.os == 'macos-12'
