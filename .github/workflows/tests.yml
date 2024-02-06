@@ -81,8 +81,9 @@ jobs:
       - run: brew config
         if: matrix.setup.os == 'macos-12'
 
-      - run: brew cleanup
+      - run: brew cleanup || true
         if: matrix.setup.os == 'macos-12'
+        continue-on-error: true
 
       - run: brew doctor
         if: matrix.setup.os == 'macos-12'
