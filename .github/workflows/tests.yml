@@ -137,14 +137,22 @@ jobs:
       #     sudo xcode-select --switch /Applications/Xcode_13.3.1.app/Contents/Developer || true
       #   continue-on-error: true
 
+      # - name: Install shell dependencies (macOS)
+      #   if: runner.os == 'macOS'
+      #   run: |
+      #     brew install coreutils parallel \
+      #       elvish \
+      #       fish \
+      #       nushell \
+      #       powershell \
+      #       zsh
+
       - name: Install shell dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install coreutils parallel \
+          brew install \
             elvish \
             fish \
-            nushell \
-            powershell \
             zsh
 
       # Allow debugging with tmate
