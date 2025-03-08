@@ -1183,7 +1183,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
 fi
 
 logn 'fnm setup..'
-eval "$(fnm env --use-on-cd --version-file-strategy=recursive)"
+eval "$(fnm env --use-on-cd)"
 fnm install v22.13.1 || true
 logk
 
