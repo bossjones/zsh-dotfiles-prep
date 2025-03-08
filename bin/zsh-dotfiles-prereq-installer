@@ -1154,7 +1154,8 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # Brew python install
   # ---------------------------------------------------------
   install_global_python() {
-    brew upgrade python3 python-tk python@3.12 python-tk@3.12 || true
+    brew upgrade python3 python-tk python@3.11 python-tk@3.11 || true
+    brew install python3 python-tk python@3.11 python-tk@3.11 || true
     brew install python3 python-tk python@3.12 python-tk@3.12 || true
     python3 -c "import sys;print(sys.executable)"
 
