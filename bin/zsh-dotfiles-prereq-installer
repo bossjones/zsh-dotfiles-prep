@@ -1150,8 +1150,8 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # Brew python install
   # ---------------------------------------------------------
   install_global_python() {
-    brew upgrade python3 python-tk python@3.11 python-tk@3.11 || true
-    brew install python3 python-tk python@3.11 python-tk@3.11 || true
+    brew upgrade python3 python-tk python@3.12 python-tk@3.12 || true
+    brew install python3 python-tk python@3.12 python-tk@3.12 || true
     python3 -c "import sys;print(sys.executable)"
 
     # FIXME: 3/7/2024
@@ -1170,15 +1170,15 @@ if [ "$CURRENT_OS" = "macos" ]; then
   logk
 
   log "installing pyenv version of python"
-  env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
-  pyenv global 3.10.12
-  logn 'pyenv installed 3.10.12...'
+  env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.12.8
+  pyenv global 3.12.8
+  logn 'pyenv installed 3.12.8...'
   logk
 
 fi
 
 logn 'fnm setup..'
-eval "$(fnm env --use-on-cd)"
+eval "$(fnm env --use-on-cd --version-file-strategy=recursive)"
 fnm install v18.16.1 || true
 logk
 
