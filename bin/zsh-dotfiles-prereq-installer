@@ -642,7 +642,11 @@ if [ "$CURRENT_OS" = "macos" ]; then
   logk
 
   logn '(brew) Installing openssl readline sqlite3 xz zlib tcl-tk'
-  brew install openssl readline sqlite3 xz zlib tcl-tk asdf pkg-config autogen bash bzip2 libffi cheat python@3.10 || true
+  brew tap bossjones/asdf-versions || true
+  logk
+  brew install asdf@0.11.2 || true
+  logk
+  brew install openssl readline sqlite3 xz zlib tcl-tk pkg-config autogen bash bzip2 libffi cheat python@3.10 || true
   logk
   brew install cmake || true
   logk
@@ -1131,7 +1135,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # shellcheck source=/dev/null
   # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
   # shellcheck disable=SC2046  # Quote this to prevent word splitting.
-  . $(brew --prefix asdf)/libexec/asdf.sh
+  . $(brew --prefix asdf@0.11.2)/libexec/asdf.sh
   asdf current
   logk
 
@@ -1150,8 +1154,9 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # Brew python install
   # ---------------------------------------------------------
   install_global_python() {
-    brew upgrade python3 python-tk python@3.11 python-tk@3.11 || true
+    # brew upgrade python3 python-tk python@3.11 python-tk@3.11 || true
     brew install python3 python-tk python@3.11 python-tk@3.11 || true
+    brew install python3 python-tk python@3.12 python-tk@3.12 || true
     python3 -c "import sys;print(sys.executable)"
 
     # FIXME: 3/7/2024
@@ -1170,16 +1175,16 @@ if [ "$CURRENT_OS" = "macos" ]; then
   logk
 
   log "installing pyenv version of python"
-  env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
-  pyenv global 3.10.12
-  logn 'pyenv installed 3.10.12...'
+  env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.12.8
+  pyenv global 3.12.8
+  logn 'pyenv installed 3.12.8...'
   logk
 
 fi
 
 logn 'fnm setup..'
 eval "$(fnm env --use-on-cd)"
-fnm install v18.16.1 || true
+fnm install v22.13.1 || true
 logk
 
 # ---------------------------------------------------------
