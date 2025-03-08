@@ -21,8 +21,10 @@ jobs:
         python-version: ["3.12"]
     steps:
       - name: Set up Git repository
-        # uses: actions/checkout@main
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # OR "2" -> To retrieve the preceding commit.
+          persist-credentials: false
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
