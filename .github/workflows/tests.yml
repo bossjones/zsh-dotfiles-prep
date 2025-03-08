@@ -170,19 +170,3 @@ jobs:
           ZSH_DOTFILES_PREP_CI: 1
           ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
           ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE: 1
-
-
-      - run: brew config
-        if: matrix.setup.os == 'macos-12'
-
-      - run: brew cleanup || true
-        if: matrix.setup.os == 'macos-12'
-        continue-on-error: true
-
-      - run: brew doctor || true
-        if: matrix.setup.os == 'macos-12'
-        continue-on-error: true
-
-      - name: Install Ruby dependencies
-        run: brew install gmp openssl@1.1 libyaml openssl@3
-        if: matrix.setup.os == 'macos-12'
