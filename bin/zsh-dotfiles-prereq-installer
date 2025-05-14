@@ -47,6 +47,8 @@ set -e
 # set -o posix
 # [ -n "$ZSH_DOTFILES_PREP_DEBUG" ] && set -x
 
+export DEBIAN_FRONTEND=noninteractive
+
 [[ $1 == "--debug" || -o xtrace ]] && ZSH_DOTFILES_PREP_DEBUG="1"
 ZSH_DOTFILES_PREP_SUCCESS=""
 
@@ -357,31 +359,6 @@ is_file_or_folder() {
 # https://github.com/bitflight-devops/shell-scripts/blob/main/install.sh
 command_exists() { command -v "$@" >/dev/null 2>&1; }
 
-# create_backup_list() {
-#   # Define a list of string variable
-#   # shellcheck disable=SC2088  # Tilde does not expand in quotes
-#   to_check_for="~/.asdf,~/bin,~/.bin,~/.local,~/.pyenv,~/.config/gh,~/.config/lvim,~/.config/sourcery,~/.config/cheat,~/.zshrc.local,~/.zshrc,~/.zprofile,~/.zshenv,~/.zsh.d,~/.profile,~/.bash_profile"
-
-#   # Use comma as separator and apply as pattern
-#   for val in ${to_check_for//,/ }
-#   do
-#     echo -e "${val}"
-#   done
-# }
-
-# Backup .zsh* .profile .bash*, configs for certain apps like:
-#
-
-# > ~/.config
-# bpytop  configstore   fontconfig  gh    iterm2   lvim      op         sourcery
-# cheat   ffmpeg-tools  gallery-dl  htop  litecli  neofetch  powerline  wandb
-
-# backup ~/.asdf
-# backup ~/bin
-# backup ~/.bin
-# backup ~/.local/bin
-# backup ~/.pyenv
-
 take_backup() {
   # Define a list of string variable
   # shellcheck disable=SC2088  # Tilde does not expand in quotes
@@ -448,42 +425,6 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # Set some basic security settings.
   logn "Configuring security settings:"
 fi
-# sudo_askpass defaults write com.apple.Safari \
-#   com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaEnabled \
-#   -bool false
-# sudo_askpass defaults write com.apple.Safari \
-#   com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaEnabledForLocalFiles \
-#   -bool false
-# sudo_askpass defaults write com.apple.screensaver askForPassword -int 1
-# sudo_askpass defaults write com.apple.screensaver askForPasswordDelay -int 0
-# sudo_askpass defaults write /Library/Preferences/com.apple.alf globalstate -int 1
-# sudo_askpass launchctl load /System/Library/LaunchDaemons/com.apple.alf.agent.plist 2>/dev/null
-
-# if [ -n "$ZSH_DOTFILES_PREP_GIT_NAME" ] && [ -n "$ZSH_DOTFILES_PREP_GIT_EMAIL" ]; then
-#   LOGIN_TEXT=$(escape "Found this computer? Please contact $ZSH_DOTFILES_PREP_GIT_NAME at $ZSH_DOTFILES_PREP_GIT_EMAIL.")
-#   echo "$LOGIN_TEXT" | grep -q '[()]' && LOGIN_TEXT="'$LOGIN_TEXT'"
-#   sudo_askpass defaults write /Library/Preferences/com.apple.loginwindow \
-#     LoginwindowText \
-#     "$LOGIN_TEXT"
-# fi
-# logk
-
-# # Check and enable full-disk encryption.
-# logn "Checking full-disk encryption status:"
-# if fdesetup status | grep  -E "FileVault is (On|Off, but will be enabled after the next restart)."; then
-#   logk
-# elif [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
-#   echo "SKIPPED (for CI)"
-# elif [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
-#   echo
-#   log "Enabling full-disk encryption on next reboot:"
-#   sudo_askpass fdesetup enable -user "$USER" |
-#     tee ~/Desktop/"FileVault Recovery Key.txt"
-#   logk
-# else
-#   echo
-#   abort "Run 'sudo fdesetup enable -user \"$USER\"' to enable full-disk encryption."
-# fi
 
 if [ "$CURRENT_OS" = "macos" ]; then
 
@@ -557,21 +498,6 @@ if ! git config push.default >/dev/null; then
   git config --global push.default current
 fi
 
-# # Setup GitHub HTTPS credentials.
-# if git credential-osxkeychain 2>&1 | grep  "git.credential-osxkeychain"; then
-#   # Actually execute the credential in case it's a wrapper script for credential-osxkeychain
-#   if git "credential-$(git config --global credential.helper 2>/dev/null)" 2>&1 |
-#     grep -v  "git.credential-osxkeychain"; then
-#     git config --global credential.helper osxkeychain
-#   fi
-
-#   if [ -n "$ZSH_DOTFILES_PREP_GITHUB_USER" ] && [ -n "$ZSH_DOTFILES_PREP_GITHUB_TOKEN" ]; then
-#     printf 'protocol=https\nhost=github.com\n' | git credential reject
-#     printf 'protocol=https\nhost=github.com\nusername=%s\npassword=%s\n' \
-#       "$ZSH_DOTFILES_PREP_GITHUB_USER" "$ZSH_DOTFILES_PREP_GITHUB_TOKEN" |
-#       git credential approve
-#   fi
-# fi
 logk
 
 if [ "$CURRENT_OS" = "macos" ]; then
@@ -800,7 +726,13 @@ set -e
 # Install Rust
 if ! (type "cargo" >/dev/null 2>&1); then
   curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
-  sh rustup.sh -y -q --no-modify-path && rm rustup.sh
+  logk
+  cat rustup.sh
+  logk
+  chmod +x rustup.sh
+  logk
+  ./rustup.sh -y -q --no-modify-path && rm rustup.sh
+  logk
   # shellcheck source=/dev/null
   # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
   # shellcheck disable=SC2046  # Quote this to prevent word splitting.
@@ -815,11 +747,6 @@ if [ ! -d "$HOME/.asdf" ]; then
   log "Cloning to ~/.asdf:"
   git clone --verbose https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.11.2
   logk
-# else
-#   (
-#     cd ~/.asdf
-#     git pull
-#   )
 fi
 logk
 
@@ -1158,16 +1085,6 @@ if [ "$CURRENT_OS" = "macos" ]; then
     brew install python3 python-tk python@3.11 python-tk@3.11 || true
     brew install python3 python-tk python@3.12 python-tk@3.12 || true
     python3 -c "import sys;print(sys.executable)"
-
-    # FIXME: 3/7/2024
-    # Need to try commenting these out ?
-    ##############################################################################################
-    # python3 -m ensurepip --upgrade
-    # pip3 install --upgrade "setuptools<60" wheel
-    # pip3 install --upgrade pip 2>&1 | grep -v "DEPRECATION:"
-    ##############################################################################################
-    # pip install --upgrade pipx 2>&1 | grep -v "DEPRECATION:"
-    # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
 
   }
   logn "installing global python via brew ..."

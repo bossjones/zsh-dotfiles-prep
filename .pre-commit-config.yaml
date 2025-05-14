@@ -14,24 +14,40 @@ exclude: ^codegen_lab/alembic/.*
 #
 # See https://github.com/pre-commit/pre-commit
 ci:
+  # Message used when pre-commit auto-fixes issues
   autofix_commit_msg: "style: pre-commit fixes"
+  # Whether to auto-fix PRs
   autofix_prs: true
+  # Branch to update when auto-updating hooks
   autoupdate_branch: ""
+  # Message used when auto-updating hooks
   autoupdate_commit_msg: "chore: update pre-commit hooks"
+  # How often to auto-update hooks
   autoupdate_schedule: weekly
+  # List of hooks to skip in CI
   skip: []
+  # Whether to process git submodules
   submodules: false
 default_install_hook_types:
-  # is triggered before the commit is finalized to allow checks on the code being committed. Running hooks on unstaged changes can lead to both false-positives and false-negatives during committing. pre-commit only runs on the staged contents of files by temporarily stashing the unstaged changes while running hooks.
+  # Runs before commit is finalized, checks staged changes
   - pre-commit
-  # hooks will be passed a single filename -- this file contains the current contents of the commit message to be validated. The commit will be aborted if there is a nonzero exit code.
+  # Validates commit messages
   - commit-msg
-  # pre-push is triggered on git push.
+  # Runs before push operation
   - pre-push
+  # Runs after checkout operation
+  - post-checkout
+  # Runs after merge operation
+  - post-merge
 default_stages:
+  # Run during git commit
   - pre-commit
+  # Run during git push
   - pre-push
-# TODO: Work with team to see when the right time is to enable this
+  # Run during git merge
+  - pre-merge-commit
+  # Run during git rebase
+  - pre-rebase
 repos:
   - repo: https://github.com/sirosen/texthooks
     rev: 0.6.8
@@ -66,10 +82,15 @@ repos:
       - id: text-unicode-replacement-char
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.31.2
+    rev: 0.33.0
     hooks:
       - id: check-github-workflows
       - id: check-readthedocs
+
+  - repo: https://github.com/woodruffw/zizmor-pre-commit
+    rev: v1.7.0
+    hooks:
+      - id: zizmor
 
   # GitHub Actions linting
   - repo: https://github.com/rhysd/actionlint
@@ -78,27 +99,8 @@ repos:
       - id: actionlint
         name: Lint GitHub Actions workflow files
         description: Runs actionlint to lint GitHub Actions workflow files
-        language: golang
-        types: ["yaml", "yml"]
+        language: system
+        types: ["yaml"]
         files: ^\.github/workflows/
         entry: actionlint
         minimum_pre_commit_version: 3.0.0
-
-  # Alternative actionlint options (commented out, choose one if needed)
-  # - repo: local
-  #   hooks:
-  #     - id: actionlint-docker
-  #       name: Lint GitHub Actions workflow files
-  #       description: Runs actionlint Docker image to lint GitHub Actions workflow files
-  #       language: docker_image
-  #       types: ["yaml"]
-  #       files: ^\.github/workflows/
-  #       entry: docker.io/rhysd/actionlint:1.7.7
-  #
-  #     - id: actionlint-system
-  #       name: Lint GitHub Actions workflow files
-  #       description: Runs system-installed actionlint to lint GitHub Actions workflow files
-  #       language: system
-  #       types: ["yaml"]
-  #       files: ^\.github/workflows/
-  #       entry: actionlint

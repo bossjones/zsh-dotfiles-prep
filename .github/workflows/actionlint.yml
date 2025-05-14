@@ -26,10 +26,13 @@ permissions: {}
 
 jobs:
   workflow_syntax:
+    name: zizmor
     if: github.repository_owner == 'bossjones'
     runs-on: ubuntu-latest
     permissions:
+      security-events: write
       contents: read
+      actions: read
     steps:
       - name: Set up Homebrew
         id: setup-homebrew
@@ -47,6 +50,8 @@ jobs:
           persist-credentials: false
 
       - run: zizmor --format sarif . > results.sarif
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload SARIF file
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -69,8 +74,9 @@ jobs:
       !github.event.repository.private
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       security-events: write
+      contents: read
+      actions: read
     steps:
       - name: Download SARIF file
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
