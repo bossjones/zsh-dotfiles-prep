@@ -226,7 +226,8 @@ jobs:
             tag: ubuntu-2204
     env:
       REGISTRY: ghcr.io
-      REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-image
+      REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-prep
+      DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -285,7 +286,8 @@ jobs:
     needs: publish_containers
     env:
       REGISTRY: ghcr.io
-      REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-image
+      REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-prep
+      DEBIAN_FRONTEND: noninteractive
     permissions:
       packages: write
     steps:
