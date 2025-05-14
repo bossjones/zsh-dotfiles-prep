@@ -1165,7 +1165,6 @@ else
   warn "fnm command not found, skipping Node.js installation via fnm."
 fi
 
-
 logn 'fnm setup..'
 eval "$(fnm env --use-on-cd)"
 fnm install v22.13.1 || true
@@ -1183,7 +1182,6 @@ logk
 
 logn 'You are ready to run zsh-dotfiles. Run: chezmoi init -R --debug -v --apply https://github.com/bossjones/zsh-dotfiles.git"'
 logk
-
 
 ZSH_DOTFILES_PREP_SUCCESS="1"
 log "-----------------------------------------------------------------------"
