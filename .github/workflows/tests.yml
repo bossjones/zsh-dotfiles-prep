@@ -23,6 +23,9 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number|| github.sha }}
   cancel-in-progress: true
+
+permissions:
+  pull-requests: read
 jobs:
   style:
     runs-on: ubuntu-22.04
@@ -39,12 +42,13 @@ jobs:
       - name: Install shfmt
         run: brew install shfmt
 
-      - run: contrib/style.sh
+      - name: Run style check
+        run: contrib/style.sh
 
   # # https://github.com/astral-sh/uv/blob/75c26229a2d8a9c2f249fd79f5fcf7b4d9ac77bb/.github/workflows/ci.yml#L88
 
   tests:
-    name: Test on ${{ matrix.os_display_name }}
+    name: Test on ${{ matrix.os_display_name }} via runner ${{ matrix.runner }} container status ${{ matrix.is_docker }}
     runs-on: ${{ matrix.runner }}
     # Define the container for Docker jobs. This will be null/empty for macOS.
     container: ${{ matrix.container_image }}
@@ -54,16 +58,6 @@ jobs:
       fail-fast: false # Continue other jobs in matrix even if one fails
       matrix:
         include:
-          # - os: macOS
-          #   runner: macOS-latest
-          # - os: Linux
-          #   runner: ubuntu-22.04
-          # # - os: Linux
-          # #   runner: ubuntu-22.04
-          # # - os: Linux
-          # #   runner: ubuntu-latest
-          # #   workdir: /github/home
-          # #   container: '{"image": "ghcr.io/homebrew/ubuntu22.04:master", "options": "--user=linuxbrew"}'
           - os_display_name: macOS
             runner: macOS-latest
             is_docker: false
@@ -97,18 +91,18 @@ jobs:
       - name: Cache Homebrew Bundler RubyGems (macOS)
         id: cache # id is used by next step
         uses: actions/cache@v4 # Updated to v4
-        if: matrix.is_docker == false && steps.set-up-homebrew.outputs.gems-path
+        if: matrix.is_docker == false && steps.set-up-homebrew.outputs.gems-path && matrix.os_display_name == 'macOS'
         with:
           path: ${{ steps.set-up-homebrew.outputs.gems-path }}
           key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
           restore-keys: ${{ runner.os }}-rubygems-
 
       - name: Install Homebrew Bundler RubyGems (macOS)
-        if: matrix.is_docker == false && steps.set-up-homebrew.outputs.gems-path && steps.cache.outputs.cache-hit != 'true'
+        if: matrix.is_docker == false && steps.set-up-homebrew.outputs.gems-path && steps.cache.outputs.cache-hit != 'true' && matrix.os_display_name == 'macOS'
         run: brew install-bundler-gems
 
       - name: Install shell dependencies (macOS)
-        if: matrix.is_docker == false
+        if: matrix.is_docker == false && matrix.os_display_name == 'macOS'
         run: |
           brew install elvish fish zsh || echo "Failed to install some macOS shell dependencies, continuing..."
 
