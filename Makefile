@@ -37,9 +37,10 @@ docker-buildx:
 	fi
 	@echo "Building image for platform: $(PLATFORM)"
 	docker buildx build \
-		--platform $(PLATFORM) \
+		--platform linux/amd64,linux/arm64 \
 		--file ./$(DOCKERFILE) \
 		--tag $(REGISTRY_IMAGE):$(IMAGE_TAG) \
+		--tag $(REGISTRY_IMAGE):$(IMAGE_TAG)-$(shell git rev-parse --short HEAD) \
 		--build-arg DEBIAN_FRONTEND=$(DEBIAN_FRONTEND) \
 		--load \
 		.
