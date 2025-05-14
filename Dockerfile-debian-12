@@ -53,15 +53,19 @@ ENV USER_UID=1001
 ENV USER_GID=121
 
 # Create a non-root user with sudo access
-RUN useradd -m -s /bin/bash --uid $USER_UID --gid $USER_GID testuser && \
+# RUN useradd -m -s /bin/bash --uid $USER_UID --gid $USER_GID testuser && \
+#     usermod -aG sudo testuser && \
+#     echo "%testuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/testuser && \
+#     chmod 0440 /etc/sudoers.d/testuser
+RUN groupadd -g $USER_GID testuser && \
+    useradd -m -s /bin/bash -u $USER_UID  -g testuser testuser && \
     usermod -aG sudo testuser && \
-    echo "%testuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/testuser && \
-    chmod 0440 /etc/sudoers.d/testuser
-
-# Create writable directories for the user
-RUN mkdir -p /home/testuser/work && \
+    echo "testuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/testuser && \
+    chmod 0440 /etc/sudoers.d/testuser && \
+    mkdir -p /home/testuser/work && \
     chown -R testuser:testuser /home/testuser && \
-    chmod -R 755 /home/testuser
+    chmod -R 755 /home/testuser && \
+    echo "testuser:password" | chpasswd
 
 # Set up working directory for our tests
 WORKDIR /home/testuser/work

@@ -47,23 +47,6 @@ jobs:
       - name: Run style check
         run: contrib/style.sh
 
-  # determine_changes:
-  #   name: Determine changes
-  #   runs-on: macOS-latest
-  #   permissions:
-  #     pull-requests: read
-  #   steps:
-  #     - name: Dump GitHub context
-  #       env:
-  #         GITHUB_CONTEXT: ${{ toJson(github) }}
-  #       run: echo "$GITHUB_CONTEXT"
-  #     - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-  #     - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #         persist-credentials: false
-
   docker_tests:
     name: Test in ${{ matrix.container_name }} Container
     runs-on: ubuntu-latest
@@ -102,7 +85,7 @@ jobs:
           file: ./${{ matrix.dockerfile }}
           push: false
           load: true
-          tags: zsh-dotfiles-prereq:${{ matrix.image_tag }}
+          tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:${{ matrix.image_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -116,7 +99,7 @@ jobs:
         run: |
           set -x
           # Run the container with the script
-          docker run --name test-container zsh-dotfiles-prereq:${{ matrix.image_tag }}
+          docker run --name test-container ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:${{ matrix.image_tag }}
 
           # # Capture the exit code
           # EXIT_CODE=$?

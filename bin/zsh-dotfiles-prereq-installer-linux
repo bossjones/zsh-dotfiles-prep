@@ -53,11 +53,11 @@ export DEBIAN_FRONTEND=noninteractive
 ZSH_DOTFILES_PREP_SUCCESS=""
 
 sudo_askpass() {
-  if [ -n "$SUDO_ASKPASS" ]; then
-    sudo --askpass "$@"
-  else
-    sudo "$@"
-  fi
+  # if [ -n "$SUDO_ASKPASS" ]; then
+  #   sudo --askpass "$@"
+  # else
+  sudo "$@"
+  # fi
 }
 
 cleanup() {
