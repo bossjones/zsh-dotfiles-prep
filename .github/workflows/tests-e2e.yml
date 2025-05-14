@@ -1,5 +1,7 @@
 # tests.yml
 name: CI-E2E
+permissions:
+  contents: read
 on:
   push:
     branches:
@@ -26,6 +28,9 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number|| github.sha }}
   cancel-in-progress: true
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-prep
 
 jobs:
   style:
@@ -253,6 +258,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -311,6 +319,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -324,7 +335,13 @@ jobs:
 
       - name: Create merged manifest
         run: |
-          # Create a merged manifest with all platforms/images
+          echo "Validate registry image name"
+          if [[ "${{ env.REGISTRY_IMAGE }}" =~ [^a-zA-Z0-9_\-\.] ]]; then
+            echo "Invalid registry image name"
+            exit 1
+          fi
+
+          echo "Create a merged manifest with all platforms/images"
           docker buildx imagetools create \
             -t ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:latest \
             ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:debian-12 \
