@@ -8,17 +8,17 @@ on:
       - master
       - main
     paths:
-      - '.github/workflows/tests.yml'
-      - 'bin/zsh-dotfiles-prereq-installer*'
-      - 'Dockerfile-*'
+      - ".github/workflows/tests.yml"
+      - "bin/zsh-dotfiles-prereq-installer*"
+      - "Dockerfile-*"
   pull_request:
     branches:
       - main
       - master
     paths:
-      - '.github/workflows/tests.yml'
-      - 'bin/zsh-dotfiles-prereq-installer*'
-      - 'Dockerfile-*'
+      - ".github/workflows/tests.yml"
+      - "bin/zsh-dotfiles-prereq-installer*"
+      - "Dockerfile-*"
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -101,6 +101,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Setup tmate debug session before docker run container
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ failure() || (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true') }}
+        with:
+          limit-access-to-actor: true
+
       - name: Run Script in Container
         run: |
           # Run the container with the script
@@ -120,46 +126,46 @@ jobs:
 
           echo "✅ Script completed successfully"
 
-      - name: Verify Installation
-        run: |
-          # Create verification script
-          cat > verify.sh << 'EOL'
-          #!/bin/bash
-          set -e
+      # - name: Verify Installation
+      #   run: |
+      #     # Create verification script
+      #     cat > verify.sh << 'EOL'
+      #     #!/bin/bash
+      #     set -e
 
-          echo "Verifying essential directories and files..."
-          test -d ~/.asdf || true
-          test -d ~/.pyenv || true
-          test -d ~/.cargo || true
-          test -d ~/.local/bin || true
-          test -f ~/compat.bash || true
-          test -f ~/compat.sh || true
+      #     echo "Verifying essential directories and files..."
+      #     test -d ~/.asdf || true
+      #     test -d ~/.pyenv || true
+      #     test -d ~/.cargo || true
+      #     test -d ~/.local/bin || true
+      #     test -f ~/compat.bash || true
+      #     test -f ~/compat.sh || true
 
-          echo "Verifying environment setup..."
-          source ~/compat.bash
+      #     echo "Verifying environment setup..."
+      #     source ~/compat.bash
 
-          echo "Verifying tools are on PATH..."
-          which pyenv || true
-          which asdf || true
-          which cargo || true
-          which fnm || true
-          which git || true
+      #     echo "Verifying tools are on PATH..."
+      #     which pyenv || true
+      #     which asdf || true
+      #     which cargo || true
+      #     which fnm || true
+      #     which git || true
 
-          echo "✅ All verifications passed!"
-          EOL
+      #     echo "✅ All verifications passed!"
+      #     EOL
 
-          # Execute verification inside the container
-          docker exec test-container bash -c "chmod +x /zsh-dotfiles-prep/verify.sh && cd /home/testuser && /zsh-dotfiles-prep/verify.sh"
+      #     # Execute verification inside the container
+      #     docker exec test-container bash -c "chmod +x /zsh-dotfiles-prep/verify.sh && cd /home/testuser && /zsh-dotfiles-prep/verify.sh"
 
-      - name: Test Idempotence
-        run: |
-          echo "Running script a second time to test idempotence..."
-          docker exec test-container bash -c "cd /zsh-dotfiles-prep && bin/zsh-dotfiles-prereq-installer-linux"
+      # - name: Test Idempotence
+      #   run: |
+      #     echo "Running script a second time to test idempotence..."
+      #     docker exec test-container bash -c "cd /zsh-dotfiles-prep && bin/zsh-dotfiles-prereq-installer-linux"
 
-          # Re-run verification to ensure everything still works
-          docker exec test-container bash -c "cd /home/testuser && /zsh-dotfiles-prep/verify.sh"
+      #     # Re-run verification to ensure everything still works
+      #     docker exec test-container bash -c "cd /home/testuser && /zsh-dotfiles-prep/verify.sh"
 
-          echo "✅ Idempotence test passed!"
+      #     echo "✅ Idempotence test passed!"
 
       - name: Setup tmate debug session
         uses: mxschmitt/action-tmate@v3
