@@ -844,6 +844,7 @@ set -e
 if ! (type "cargo" >/dev/null 2>&1); then
   log "Installing Rust and Cargo..."
   curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
+  set -x
   log "rustup"
   logk
   cat rustup.sh
