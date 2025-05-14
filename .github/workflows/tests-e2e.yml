@@ -62,46 +62,66 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-  linux_installer_tests:
-    name: Test on ${{ matrix.os_display_name }}
+  docker_tests:
+    name: Test in ${{ matrix.container_name }} Container
     runs-on: ubuntu-latest
-    container: ${{ matrix.container_image }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os_display_name: Ubuntu-22.04
-            container_image: ubuntu:22.04
-          - os_display_name: Debian-12
-            container_image: debian:12
+          - container_name: Debian 12
+            dockerfile: Dockerfile-debian-12
+            image_tag: debian-12
+          - container_name: Ubuntu 22.04
+            dockerfile: Dockerfile-ubuntu-2204
+            image_tag: ubuntu-2204
     steps:
-      - name: Install prerequisites
-        run: |
-          apt-get update
-          apt-get install -y git curl sudo ca-certificates wget gnupg lsb-release apt-transport-https
-
       - name: Set up Git repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify script exists
-        run: |
-          ls -la bin/
-          test -f bin/zsh-dotfiles-prereq-installer-linux || true
-          chmod +x bin/zsh-dotfiles-prereq-installer-linux
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: First run of zsh-dotfiles-prereq-installer-linux
-        run: bin/zsh-dotfiles-prereq-installer-linux
-        env:
-          ZSH_DOTFILES_PREP_CI: 1
-          ZSH_DOTFILES_PREP_DEBUG: 1
-          ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
-          ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE: 1
+      - name: Build Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: zsh-dotfiles-prereq:${{ matrix.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Verify first run results
+      - name: Run Script in Container
         run: |
+          # Run the container with the script
+          docker run --name test-container zsh-dotfiles-prereq:${{ matrix.image_tag }}
+
+          # Capture the exit code
+          EXIT_CODE=$?
+
+          # Print the script output
+          echo "Container logs:"
+          docker logs test-container
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "❌ Script exited with non-zero status: $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+          echo "✅ Script completed successfully"
+
+      - name: Verify Installation
+        run: |
+          # Create verification script
+          cat > verify.sh << 'EOL'
+          #!/bin/bash
+          set -e
+
           echo "Verifying essential directories and files..."
           test -d ~/.asdf || true
           test -d ~/.pyenv || true
@@ -113,33 +133,29 @@ jobs:
           echo "Verifying environment setup..."
           source ~/compat.bash
 
-          echo "Verifying core tools..."
-          # Use which instead of command -v for more verbose output
+          echo "Verifying tools are on PATH..."
           which pyenv || true
           which asdf || true
           which cargo || true
-          which zsh || true
+          which fnm || true
           which git || true
 
-          echo "Verification successful!"
+          echo "✅ All verifications passed!"
+          EOL
 
-      - name: Second run (idempotence test)
-        run: bin/zsh-dotfiles-prereq-installer-linux
-        env:
-          ZSH_DOTFILES_PREP_CI: 1
-          ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
-          ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE: 1
+          # Execute verification inside the container
+          docker exec test-container bash -c "chmod +x /zsh-dotfiles-prep/verify.sh && cd /home/testuser && /zsh-dotfiles-prep/verify.sh"
 
-      - name: Verify shell integration
+      - name: Test Idempotence
         run: |
-          echo "Testing shell integration..."
-          bash -c "source ~/compat.bash &&
-                   echo 'Testing pyenv:' && which pyenv &&
-                   echo 'Testing asdf:' && which asdf &&
-                   echo 'Testing fnm:' && which fnm || true"
-          echo "Shell integration test complete!"
+          echo "Running script a second time to test idempotence..."
+          docker exec test-container bash -c "cd /zsh-dotfiles-prep && bin/zsh-dotfiles-prereq-installer-linux"
 
-      # Debug with tmate if needed
+          # Re-run verification to ensure everything still works
+          docker exec test-container bash -c "cd /home/testuser && /zsh-dotfiles-prep/verify.sh"
+
+          echo "✅ Idempotence test passed!"
+
       - name: Setup tmate debug session
         uses: mxschmitt/action-tmate@v3
         if: ${{ failure() || (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true') }}
@@ -210,63 +226,6 @@ jobs:
         if: ${{ failure() || (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true') }}
         with:
           limit-access-to-actor: true
-
-  # # Example of how to create combined container images inspired by authorization_service.yaml
-  # build_container_image:
-  #   name: Build Container Image
-  #   # Only run this job on main branch pushes to demonstrate container builds
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-  #   runs-on: ubuntu-latest
-  #   needs: [linux_installer_tests, macos_tests]
-  #   env:
-  #     REGISTRY: ghcr.io
-  #     REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-image
-  #   permissions:
-  #     contents: read
-  #     packages: write
-  #     id-token: write
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v3
-
-  #     - name: Log into GitHub Container Registry
-  #       uses: docker/login-action@v3
-  #       with:
-  #         registry: ${{ env.REGISTRY}}
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
-
-  #     - name: Extract metadata for Docker
-  #       id: meta
-  #       uses: docker/metadata-action@v5
-  #       with:
-  #         images: ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}
-  #         tags: |
-  #           type=ref,event=branch
-  #           type=sha,format=short
-
-  #     - name: Build and push Docker image
-  #       id: build-and-push
-  #       uses: docker/build-push-action@v6
-  #       with:
-  #         context: .
-  #         # Example Dockerfile that would use the zsh-dotfiles-prereq-installer-linux
-  #         # You would need to create this Dockerfile in your repository
-  #         file: ./Dockerfile
-  #         push: true
-  #         tags: ${{ steps.meta.outputs.tags }}
-  #         labels: ${{ steps.meta.outputs.labels }}
-
-  #     - name: Generate Artifact Attestation
-  #       uses: actions/attest-build-provenance@v2
-  #       with:
-  #         subject-name: ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}
-  #         subject-digest: ${{ steps.build-and-push.outputs.digest }}
-  #         push-to-registry: true
-
 
   publish_containers:
     name: Build and Publish Container Images

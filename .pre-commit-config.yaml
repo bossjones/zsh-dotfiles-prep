@@ -82,13 +82,13 @@ repos:
       - id: text-unicode-replacement-char
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.31.2
+    rev: 0.33.0
     hooks:
       - id: check-github-workflows
       - id: check-readthedocs
 
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.5.1
+    rev: v1.7.0
     hooks:
       - id: zizmor
 
