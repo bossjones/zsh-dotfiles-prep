@@ -1,24 +1,19 @@
 # tests.yml
 name: CI-E2E
 permissions:
+  pull-requests: read
   contents: read
 on:
   push:
     branches:
       - master
       - main
-    paths:
-      - ".github/workflows/tests.yml"
-      - "bin/zsh-dotfiles-prereq-installer*"
-      - "Dockerfile-*"
   pull_request:
-    branches:
-      - main
-      - master
-    paths:
-      - ".github/workflows/tests.yml"
-      - "bin/zsh-dotfiles-prereq-installer*"
-      - "Dockerfile-*"
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   workflow_dispatch:
     inputs:
       debug_enabled:
