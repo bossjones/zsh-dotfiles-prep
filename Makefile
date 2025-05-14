@@ -118,3 +118,15 @@ docker-full-pipeline:
 	@make docker-run-test IMAGE_TAG=$(IMAGE_TAG)
 	@make docker-buildx-push DOCKERFILE=$(DOCKERFILE) IMAGE_TAG=$(IMAGE_TAG)
 	@echo "✅ Full Docker pipeline completed successfully"
+
+.PHONY: debian-fix-broken
+debian-fix-broken:
+	sudo apt clean
+	sudo apt update
+	sudo apt upgrade
+	sudo apt --fix-broken install
+	sudo dpkg --configure -a
+	sudo apt --fix-broken install
+	sudo apt clean
+	sudo apt --fix-broken install
+	sudo dpkg --configure -a
