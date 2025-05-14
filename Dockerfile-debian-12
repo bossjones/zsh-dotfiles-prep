@@ -34,10 +34,12 @@ RUN useradd -m -s /bin/bash testuser && \
 WORKDIR /zsh-dotfiles-prep
 
 # Copy repository files
-COPY . .
+COPY --chown=testuser:testuser . .
 
 # Make sure scripts are executable
-RUN chmod +x bin/zsh-dotfiles-prereq-installer-linux
+RUN chmod +x bin/zsh-dotfiles-prereq-installer-linux && \
+    chown -R testuser:testuser /zsh-dotfiles-prep && \
+    chmod -R u+w /zsh-dotfiles-prep
 
 # Switch to non-root user (since script refuses to run as root)
 USER testuser
