@@ -852,6 +852,10 @@ fi # End of Linux specific package installation
 if ! command_exists cargo; then
   log "Installing Rust and Cargo..."
   curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
+  log "rustup"
+  logk
+  cat rustup.sh
+  logk
   sh rustup.sh -y -q --no-modify-path && rm rustup.sh
   # shellcheck source=/dev/null
   source "$HOME/.cargo/env" # Source for current session

@@ -47,6 +47,8 @@ set -e
 # set -o posix
 # [ -n "$ZSH_DOTFILES_PREP_DEBUG" ] && set -x
 
+export DEBIAN_FRONTEND=noninteractive
+
 [[ $1 == "--debug" || -o xtrace ]] && ZSH_DOTFILES_PREP_DEBUG="1"
 ZSH_DOTFILES_PREP_SUCCESS=""
 
