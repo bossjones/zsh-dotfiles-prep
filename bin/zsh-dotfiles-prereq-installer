@@ -726,7 +726,9 @@ set -e
 # Install Rust
 if ! (type "cargo" >/dev/null 2>&1); then
   curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
-  sh rustup.sh -y -q --no-modify-path && rm rustup.sh
+  cat rustup.sh
+  chmod +x rustup.sh
+  ./rustup.sh -y -q --no-modify-path && rm rustup.sh
   # shellcheck source=/dev/null
   # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
   # shellcheck disable=SC2046  # Quote this to prevent word splitting.
