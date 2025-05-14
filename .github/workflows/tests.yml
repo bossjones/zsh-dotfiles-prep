@@ -112,19 +112,6 @@ jobs:
         run: |
           brew install elvish fish zsh || echo "Failed to install some macOS shell dependencies, continuing..."
 
-      - name: Install shell dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          # Install shells and their documentation
-          sudo apt-get install -y \
-            elvish \
-            fish \
-            zsh \
-            zsh-doc \
-            manpages \
-            manpages-dev
-
       # Allow debugging with tmate
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
@@ -133,6 +120,13 @@ jobs:
           # Use registered public SSH key(s)
           # If you have registered one or more public SSH keys with your GitHub profile, tmate will be started such that only those keys are authorized to connect, otherwise anybody can connect to the tmate session. If you want to require a public SSH key to be installed with the tmate session, no matter whether the user who started the workflow has registered any in their GitHub profile, you will need to configure the setting limit-access-to-actor to true, like so:
           limit-access-to-actor: true
+
+      - name: Install shell dependencies (Linux)
+        if: matrix.os_display_name == 'Linux' && matrix.runner == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y elvish fish zsh zsh-doc manpages manpages-dev
+
 
       - name: Run bin/zsh-dotfiles-prereq-installer
         run: bin/zsh-dotfiles-prereq-installer
