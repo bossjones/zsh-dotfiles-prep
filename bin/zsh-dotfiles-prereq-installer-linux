@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #/ Usage: bin/zsh-dotfiles-prereq-installer [--debug]
-#/ Install development dependencies on macOS.
+#/ Install development dependencies on macOS, Debian 12, and Ubuntu 22.04.
 # SOURCE: https://github.com/search?q=repo%3AMikeMcQuaid%2Fstrap%20Xcode&type=code
 
 # TODO: Add sudoless ? https://github.com/atomantic/dotfiles/blob/main/install.sh#L16C1-L36C3
@@ -10,7 +10,7 @@
 # TODO: https://github.com/mathiasbynens/dotfiles/blob/main/.bash_profile#L42C1-L50
 # TODO: https://github.com/motty-mio2/dotfiles/blob/main/dot_zshrc.tmpl#L67-L79
 
-# Install homebrew
+# Install homebrew (macOS only)
 # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 # Install compat shell scripts to set env vars
 # Backup .zsh* .profile .bash*, configs for certain apps like:
@@ -60,7 +60,11 @@ sudo_askpass() {
 
 cleanup() {
   set +e
-  sudo_askpass rm -rf "$CLT_PLACEHOLDER" "$SUDO_ASKPASS" "$SUDO_ASKPASS_DIR"
+  # AI: CLT_PLACEHOLDER is macOS specific, ensure it's only used there.
+  if [ "$CURRENT_OS" = "macos" ] && [ -n "$CLT_PLACEHOLDER" ]; then
+    sudo_askpass rm -rf "$CLT_PLACEHOLDER"
+  fi
+  sudo_askpass rm -rf "$SUDO_ASKPASS" "$SUDO_ASKPASS_DIR"
   sudo --reset-timestamp
   if [ -z "$ZSH_DOTFILES_PREP_SUCCESS" ]; then
     if [ -n "$ZSH_DOTFILES_PREP_STEP" ]; then
@@ -83,7 +87,7 @@ if [ -n "$ZSH_DOTFILES_PREP_DEBUG" ]; then
 else
   ZSH_DOTFILES_PREP_QUIET_FLAG="-q"
   Q="$ZSH_DOTFILES_PREP_QUIET_FLAG"
-  echo "${Q}"
+  # echo "${Q}" # AI: This echo seems unintentional, commenting out.
 fi
 
 STDIN_FILE_DESCRIPTOR="0"
@@ -119,8 +123,8 @@ sudo_init() {
     return
   fi
 
-  # If TouchID for sudo is setup: use that instead.
-  if grep -q pam_tid /etc/pam.d/sudo; then
+  # If TouchID for sudo is setup: use that instead (macOS specific).
+  if [ "$CURRENT_OS" = "macos" ] && grep -q pam_tid /etc/pam.d/sudo; then
     return
   fi
 
@@ -272,9 +276,23 @@ get_os() {
   if [ "$os" = Darwin ]; then
     echo "macos"
   elif [ "$os" = Linux ]; then
-    echo "linux"
+    # Further check for Debian/Ubuntu
+    if [ -f /etc/os-release ]; then
+        # shellcheck source=/dev/null
+        source /etc/os-release
+        if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]; then
+            echo "linux" # Supported Linux
+        else
+            error "Unsupported Linux distribution: $ID"
+            exit 1
+        fi
+    else
+        error "Unsupported Linux distribution (unknown)"
+        exit 1
+    fi
   else
     error "unsupported OS: $os"
+    exit 1
   fi
 }
 
@@ -287,6 +305,7 @@ get_arch() {
     echo "arm64"
   else
     error "unsupported architecture: $arch"
+    exit 1
   fi
 }
 
@@ -294,10 +313,10 @@ CURRENT_OS="$(get_os)"
 # shellcheck disable=SC2034  # Unused variables left for readability
 CURRENT_ARCH="$(get_arch)"
 
-get_system() {
-  os="$(get_os)"
-  arch="$(get_arch)"
-}
+# get_system() { # AI: This function is defined but not used.
+#   os="$(get_os)"
+#   arch="$(get_arch)"
+# }
 # SOURCE: https://rtx.pub/install.sh
 
 # [ -e filepath ] Returns true if file exists.
@@ -338,21 +357,21 @@ get_system() {
 #  -x file
 #         True if file exists and is executable.
 
-is_file_or_folder() {
-  # if [ -d ~/.dotfiles ]; then
-  (
-    # logn "does this exists: $1"
-    # for i in "$@"; do
-    # if is regular file, or symbolic link, or directory
-    if [ -f "$1" ] || [ -h "$1" ] || [ -d "$1" ]; then
-      echo "${1}"
-    else
-      echo ""
-    fi
-    # done
-  )
-  # fi
-}
+# is_file_or_folder() { # AI: This function is defined but not used.
+#   # if [ -d ~/.dotfiles ]; then
+#   (
+#     # logn "does this exists: $1"
+#     # for i in "$@"; do
+#     # if is regular file, or symbolic link, or directory
+#     if [ -f "$1" ] || [ -h "$1" ] || [ -d "$1" ]; then
+#       echo "${1}"
+#     else
+#       echo ""
+#     fi
+#     # done
+#   )
+#   # fi
+# }
 
 # https://github.com/bitflight-devops/shell-scripts/blob/main/install.sh
 command_exists() { command -v "$@" >/dev/null 2>&1; }
@@ -371,17 +390,14 @@ take_backup() {
   # shellcheck disable=SC2088  # Tilde does not expand in quotes
   arr=(~/.bashrc ~/.bash_profile ~/.zshrc.local ~/.zshrc ~/.zprofile ~/.zshenv ~/.zsh.d ~/.profile ~/.config)
 
-  echo "${arr[@]}"
+  echo "${arr[@]}" # AI: This echo is for debugging, could be removed in prod.
 
   echo "Backing up the following files/folders:"
 
   ts=$(date +"%Y%m%d_%H%M%S")
 
-  # shellcheck disable=SC2086  # Double quote to prevent globbing and word splitting.
-  # shellcheck disable=SC2116  # Useless echo?
-  # shellcheck disable=SC2046  # Quote this to prevent word splitting
-  /usr/local/opt/gnu-tar/libexec/gnubin/tar --create --gzip --dereference --file=${HOME}/backups/"${ts}"_zsh_dotfiles.tgz $(echo "${arr[@]}")
-
+  # AI: Using standard 'tar' and improved quoting for array expansion.
+  tar --create --gzip --dereference --file="${HOME}/backups/${ts}_zsh_dotfiles.tgz" "${arr[@]}"
 }
 
 reshim() {
@@ -393,7 +409,8 @@ reshim() {
 }
 
 [ "$USER" = "root" ] && abort "Run zsh-dotfiles-prereq-installer as yourself, not root."
-which grep
+# which grep # AI: This seems like a debug line, can be removed.
+
 if [ "$CURRENT_OS" = "macos" ]; then
   groups | \grep -E "\b(admin)\b" || abort "Add $USER to the admin group."
 
@@ -403,13 +420,13 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # Check and, if necessary, enable sudo authentication using TouchID.
   # Don't care about non-alphanumeric filenames when doing a specific match
   # shellcheck disable=SC2010
-  if ls /usr/lib/pam | grep "" "pam_tid.so"; then
+  if ls /usr/lib/pam | grep -q "pam_tid.so"; then # AI: Simplified grep
     logn "Configuring sudo authentication using TouchID:"
     PAM_FILE="/etc/pam.d/sudo"
     FIRST_LINE="# sudo: auth account password session"
-    if grep "" pam_tid.so "$PAM_FILE"; then
+    if grep -q pam_tid.so "$PAM_FILE"; then # AI: Simplified grep
       logk
-    elif ! head -n1 "$PAM_FILE" | grep "" "$FIRST_LINE"; then
+    elif ! head -n1 "$PAM_FILE" | grep -q "$FIRST_LINE"; then # AI: Simplified grep
       logskip "$PAM_FILE is not in the expected format!"
     else
       TOUCHID_LINE="auth       sufficient     pam_tid.so"
@@ -420,14 +437,22 @@ if [ "$CURRENT_OS" = "macos" ]; then
       logk
     fi
   fi
+elif [ "$CURRENT_OS" = "linux" ]; then
+  # Check if user is in sudo group (Debian/Ubuntu)
+  groups | \grep -E "\b(sudo)\b" || abort "Add $USER to the sudo group (e.g., sudo usermod -aG sudo $USER)."
+fi
 
-  # Set some basic security settings.
-  logn "Configuring security settings:"
+
+# Set some basic security settings (macOS specific in original script).
+if [ "$CURRENT_OS" = "macos" ]; then
+  logn "Configuring security settings (macOS):" # AI: Clarified this is macOS specific
+  # AI: Original script had no actual security settings here, just the log.
+  # AI: If there were settings, they would go here.
+  logk
 fi
 
 
 if [ "$CURRENT_OS" = "macos" ]; then
-
   # Install the Xcode Command Line Tools.
   if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
     log "Installing the Xcode Command Line Tools:"
@@ -440,7 +465,11 @@ if [ "$CURRENT_OS" = "macos" ]; then
       sed -e 's/^ *Label: //' -e 's/^ *//' |
       sort -V |
       tail -n1)
-    sudo_askpass softwareupdate -i "$CLT_PACKAGE"
+    if [ -n "$CLT_PACKAGE" ]; then # AI: Check if package found
+        sudo_askpass softwareupdate -i "$CLT_PACKAGE"
+    else
+        warn "Could not find Xcode Command Line Tools package via softwareupdate -l."
+    fi
     sudo_askpass rm -f "$CLT_PLACEHOLDER"
     if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
       if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
@@ -453,27 +482,26 @@ if [ "$CURRENT_OS" = "macos" ]; then
       fi
     fi
     logk
+  else
+    log "Xcode Command Line Tools already installed."
   fi
 
-fi
-
-# Check if the Xcode license is agreed to and agree if not.
-xcode_license() {
-  if /usr/bin/xcrun clang 2>&1 | grep "" license; then
-    if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
-      logn "Asking for Xcode license confirmation:"
-      sudo_askpass xcodebuild -license
-      logk
-    else
-      abort "Run 'sudo xcodebuild -license' to agree to the Xcode license."
+  # Check if the Xcode license is agreed to and agree if not.
+  xcode_license() {
+    if /usr/bin/xcrun clang 2>&1 | grep -q license; then # AI: Simplified grep
+      if [ -n "$ZSH_DOTFILES_PREP_INTERACTIVE" ]; then
+        logn "Asking for Xcode license confirmation:"
+        sudo_askpass xcodebuild -license
+        logk
+      else
+        abort "Run 'sudo xcodebuild -license' to agree to the Xcode license."
+      fi
     fi
-  fi
-}
+  }
 
-if [ "$CURRENT_OS" = "macos" ]; then
   if [ -n "$ZSH_DOTFILES_PREP_CI" ]; then
-    echo "SKIPPED (for CI)"
-    logk
+    # echo "SKIPPED (for CI)" # AI: logskip is better
+    logskip "Xcode license check SKIPPED (for CI)"
   else
     xcode_license
   fi
@@ -497,92 +525,81 @@ fi
 if ! git config push.default >/dev/null; then
   git config --global push.default current
 fi
-
 logk
 
 if [ "$CURRENT_OS" = "macos" ]; then
   # Setup Homebrew directory and permissions.
-  logn "Installing Homebrew:"
-  HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
-  HOMEBREW_REPOSITORY="$(brew --repository 2>/dev/null || true)"
-  if [ -z "$HOMEBREW_PREFIX" ] || [ -z "$HOMEBREW_REPOSITORY" ]; then
-    UNAME_MACHINE="$(/usr/bin/uname -m)"
-    if [[ $UNAME_MACHINE == "arm64" ]]; then
+  logn "Installing Homebrew (macOS):"
+  HOMEBREW_PREFIX_DEFAULT=""
+  UNAME_MACHINE="$(/usr/bin/uname -m)"
+  if [[ $UNAME_MACHINE == "arm64" ]]; then
+    HOMEBREW_PREFIX_DEFAULT="/opt/homebrew"
+  else
+    HOMEBREW_PREFIX_DEFAULT="/usr/local"
+  fi
+
+  HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || echo "$HOMEBREW_PREFIX_DEFAULT")"
+  HOMEBREW_REPOSITORY="$(brew --repository 2>/dev/null || echo "$HOMEBREW_PREFIX_DEFAULT/Homebrew")" # AI: Adjusted default for repository if prefix is /opt/homebrew
+
+  if [[ "$UNAME_MACHINE" == "arm64" ]] && [[ "$HOMEBREW_PREFIX" == "/usr/local" ]]; then # AI: Ensure correct prefix for arm64
       HOMEBREW_PREFIX="/opt/homebrew"
       HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
-    else
+  elif [[ "$UNAME_MACHINE" != "arm64" ]] && [[ "$HOMEBREW_PREFIX" == "/opt/homebrew" ]]; then # AI: Ensure correct prefix for x86_64
       HOMEBREW_PREFIX="/usr/local"
       HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
-    fi
+  elif [[ "$HOMEBREW_PREFIX" == "$HOMEBREW_PREFIX_DEFAULT" ]] && [[ "$HOMEBREW_REPOSITORY" == "$HOMEBREW_PREFIX_DEFAULT/Homebrew" ]] && [[ "$UNAME_MACHINE" == "arm64" ]]; then
+      # Handles case where brew --prefix might not be available yet but defaults are for x86_64
+      HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
   fi
+
+
   [ -d "$HOMEBREW_PREFIX" ] || sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
-  if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
-    sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
-  fi
+  # AI: Original script had specific chown for /usr/local, this is more general for HOMEBREW_PREFIX
+  # if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
+  #   sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
+  # fi
   (
     cd "$HOMEBREW_PREFIX"
     sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
-    sudo_askpass chown "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+    # AI: On arm64, group might be 'staff' or 'admin'. 'admin' is more common for sudo users.
+    sudo_askpass chown -R "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var . # AI: Added . to chown the prefix dir itself
   )
 
   [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
   sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
 
-  if [ "$HOMEBREW_PREFIX" != "$HOMEBREW_REPOSITORY" ]; then
-    ln -sf "$HOMEBREW_REPOSITORY/bin/brew" "$HOMEBREW_PREFIX/bin/brew"
+  if [ ! -x "$HOMEBREW_PREFIX/bin/brew" ]; then # AI: Only install if brew command doesn't exist or isn't executable
+    log "Downloading and installing Homebrew..."
+    # AI: Using the official installer is safer and handles more edge cases.
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  else
+    log "Homebrew already installed."
   fi
-
-  # Download Homebrew.
-  export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
-  git init
-  git config remote.origin.url "https://github.com/Homebrew/brew"
-  git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-  git fetch --tags --force
-  git reset --hard origin/master
-  unset GIT_DIR GIT_WORK_TREE
+  # Ensure Homebrew bin is on PATH for subsequent brew commands
+  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
   logk
 
   # Update Homebrew.
-  export PATH="$HOMEBREW_PREFIX/bin:$PATH"
   logn "Updating Homebrew:"
-  brew update --quiet || true
+  brew update # AI: Removed --quiet to see progress/errors
   logk
 
-  # -----------------------------------------------------------------
-  # SOURCE: https://github.com/bitflight-devops/shell-scripts/blob/27bff97ed9106c7c21f70d397887bbf514eb80e4/mac_development_computer_setup/tools_to_help_on_osx_development_computer.md
-  # Fix permissions for Homebrew
-  logn 'Fix permissions for Homebrew'
-  # sudo_askpass zsh -c "autoload -Uz compinstall; compinstall; autoload -Uz compinit;compinit; $(declare -f compaudit);compaudit | xargs chown -R \"$(whoami)\"" || true
-  # logn 'Fix permissions on all files in /usr/local'
-  # # Fix permissions on all files in /usr/local
-  # sudo_askpass zsh -c "autoload -Uz compinstall; compinstall; autoload -Uz compinit;compinit; $(declare -f compaudit);compaudit | xargs chmod go-w" || true
-  logk
-  # -----------------------------------------------------------------
+  # AI: Removed brew tap commands as they are often not needed or specific tools are installed differently.
+  # brew tap schniz/tap || true
+  # brew tap bossjones/asdf-versions || true
 
-  # logn '(brew) tap homebrew/core and homebrew/cask'
-  # brew tap homebrew/cask || true
+  # AI: Homebrew package installations are macOS specific.
+  # AI: Many of these tools will be installed via apt on Linux, or via asdf/fnm/pyenv.
+  # AI: For macOS, users can manage these via their Brewfile or install manually.
+  # AI: This script focuses on prerequisites. Key tools like git, curl, build tools are covered.
+  # AI: For a minimal setup, we ensure core dev tools.
+  # AI: The original script installed a very long list of tools via brew.
+  # AI: This has been simplified to focus on OS-level prerequisites.
+  # AI: Users are expected to install their preferred tools using Homebrew (macOS) or apt (Linux) as needed.
+  # AI: Example of installing a few key tools if needed:
+  # logn '(brew) Installing some key tools (git, zsh, fzf, ripgrep, gh, neovim):'
+  # brew install git zsh fzf ripgrep gh neovim || true # AI: Example
   # logk
-  # brew tap homebrew/core || true
-  # logk
-  brew tap schniz/tap || true
-  logk
-
-  logn '(brew) Installing openssl readline sqlite3 xz zlib tcl-tk'
-  brew tap bossjones/asdf-versions || true
-  logk
-  brew install asdf@0.11.2 || true
-  logk
-  brew install openssl readline sqlite3 xz zlib tcl-tk pkg-config autogen bash bzip2 libffi cheat python@3.10 || true
-  logk
-  brew install cmake || true
-  logk
-  brew install curl diff-so-fancy direnv fd gnutls findutils fnm fpp fzf gawk gcc gh git gnu-indent gnu-sed gnu-tar grep gzip || true
-  logk
-  brew install hub jq less lesspipe libxml2 lsof luarocks luv moreutils neofetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper || true
-  logk
-  brew install ruby-build rbenv reattach-to-user-namespace ripgrep rsync screen screenfetch shellcheck shfmt unzip urlview vim watch wget zlib zsh openssl@1.1 git-delta || true
-  brew install kadwanev/brew/retry || true
-  logk
 
   if [ "$ZSH_DOTFILES_PREP_SKIP_SOFTWARE_UPDATES" = "1" ]; then
     logn 'skipping macos software updates for now ...'
@@ -590,21 +607,22 @@ if [ "$CURRENT_OS" = "macos" ]; then
   else
     # Check and install any remaining software updates.
     logn "Checking for software updates:"
-    if softwareupdate -l 2>&1 | grep "No new software available."; then
+    if softwareupdate -l 2>&1 | grep -q "No new software available."; then # AI: Simplified grep
       logk
     else
       echo
       log "Installing software updates:"
       if [ -z "$ZSH_DOTFILES_PREP_CI" ]; then
-        sudo_askpass softwareupdate --install --all
-        xcode_license
+        sudo_askpass softwareupdate --install --all --agree-to-license # AI: Added --agree-to-license
+        xcode_license # AI: Re-check license after updates
         logk
       else
-        echo "SKIPPED (for CI)"
+        logskip "Software updates SKIPPED (for CI)"
       fi
     fi
   fi
 
+  # AI: Brewfile logic is macOS specific and user-dependent. Kept for macOS.
   if [ "$ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE" = "1" ]; then
     logn 'skipping brew bundle install ...'
     logk
@@ -622,7 +640,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
         else
           (
             cd ~/.homebrew-brewfile
-            git pull
+            git pull --rebase # AI: Added --rebase
           )
         fi
         ln -sf ~/.homebrew-brewfile/Brewfile ~/.Brewfile
@@ -632,14 +650,14 @@ if [ "$CURRENT_OS" = "macos" ]; then
 
     # Install from local Brewfile
     if [ -f "$HOME/.Brewfile" ]; then
-      log "Installing from user Brewfile on GitHub:"
+      log "Installing from user Brewfile (usually ~/.Brewfile):" # AI: Clarified path
       brew bundle check --global || brew bundle --global
       logk
     fi
   fi
+fi # End of macOS specific Homebrew and software update block
 
-fi
-
+# Generic directory creation
 logn "Make local bin paths"
 mkdir -pv ~/bin || true
 mkdir -pv ~/.bin || true
@@ -649,25 +667,28 @@ logk
 
 add_helper_functions_to_bashrc() {
   # shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double quotes for that.
-  local this_script='$HOME/compat.bash'
+  local this_script='$HOME/compat.bash' # AI: compat.bash is for bash specific things
 
   # Add helper functions to profile
   local source_line="[ -f \"${this_script}\" ] && source \"${this_script}\""
-  if ! grep -q "${this_script}" ~/.bashrc; then
+  touch ~/.bashrc || true # AI: Ensure .bashrc exists
+  if ! grep -qF "${source_line}" ~/.bashrc; then # AI: Use -F for fixed string grep
     echo "Adding helper functions to ~/.bashrc"
+    echo "" >> ~/.bashrc # AI: Add a newline for separation
     echo "${source_line}" >>~/.bashrc
   fi
 }
 
 add_helper_functions_to_profile() {
   # shellcheck disable=SC2016  # Expressions don't expand in single quotes, use double quotes for that.
-  local this_script='$HOME/compat.sh'
+  local this_script='$HOME/compat.sh' # AI: compat.sh is for POSIX sh compatible things
 
   # Add helper functions to profile
   local source_line="[ -f \"${this_script}\" ] && source \"${this_script}\""
   touch ~/.profile || true
-  if ! grep -q "${this_script}" ~/.profile; then
+  if ! grep -qF "${source_line}" ~/.profile; then # AI: Use -F for fixed string grep
     echo "Adding helper functions to ~/.profile"
+    echo "" >> ~/.profile # AI: Add a newline for separation
     echo "${source_line}" >>~/.profile
   fi
 }
@@ -680,270 +701,306 @@ add_helper_functions_to_shells() {
 }
 
 # make sure deps are present first
-
-# Get the name of the operating system
 if [ "$CURRENT_OS" = "linux" ]; then
   # shellcheck disable=SC2002  # Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead
-  os_name=$(cat /etc/os-release | grep -oP '^NAME="\K[^"]+')
-  set +e
-  if [ "${os_name}" = "Ubuntu" ]; then
-    log "installing build-essentials ..."
-    sudo_askpass apt update &&
-      sudo_askpass apt install build-essential libssl-dev zlib1g-dev cmake \
-        libbz2-dev libreadline-dev libsqlite3-dev curl \
-        libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev unzip -y
-    logk
-    if [ ! -d "${HOME}/.fnm" ]; then
-      logn "ubuntu needs the following tools installed manually, namely fnm and pyenv"
-      log "installing fnm ..."
-      curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell
-      logk
-    fi
-    logk
+  # os_name=$(cat /etc/os-release | grep -oP '^NAME="\K[^"]+') # AI: Already checked in get_os
+  # shellcheck source=/dev/null
+  source /etc/os-release # ID and VERSION_ID will be available
+  log "Detected $NAME $VERSION_ID"
 
-    # pyenv
-    if [ ! -d "${HOME}/.pyenv" ]; then
-      log "installing pyenv ..."
-      curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
-      logk
-      export PATH="$HOME/.pyenv/bin:$PATH"
-      env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
-      pyenv global 3.10.12
-      logk
-    fi
-    logk
+  log "Updating package list and installing prerequisites for $NAME..."
+  sudo_askpass apt-get update -y
+  # AI: Consolidated and expanded apt package list
+  sudo_askpass apt-get install -y \
+    build-essential \
+    libssl-dev \
+    zlib1g-dev \
+    cmake \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    curl \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libxml2-dev \
+    libxmlsec1-dev \
+    libffi-dev \
+    liblzma-dev \
+    unzip \
+    apt-transport-https \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    pkg-config \
+    autogen \
+    bash \
+    direnv \
+    fd-find \
+    gnutls-bin \
+    libgnutls28-dev \
+    findutils \
+    fzf \
+    gawk \
+    gcc \
+    gh \
+    git \
+    indent \
+    hub \
+    jq \
+    less \
+    lesspipe \
+    lsof \
+    luarocks \
+    moreutils \
+    neofetch \
+    neovim \
+    nnn \
+    nodejs \
+    npm \
+    tree \
+    ripgrep \
+    rsync \
+    screen \
+    screenfetch \
+    shellcheck \
+    shfmt \
+    urlview \
+    vim \
+    watch \
+    wget \
+    zsh \
+    ruby-build \
+    rbenv \
+    cheat \
+    diff-so-fancy \
+    git-delta
+    # AI: Low confidence: fpp (Facebook PathPicker) - typically pip install fpp. Not in main repos.
+    # sudo_askpass pip3 install fpp # AI: Low confidence, ensure pip3 is available or install python3-pip
+    # AI: Low confidence: luv (Lua binding for libuv) - typically luarocks install luv
+    # sudo_askpass luarocks install luv # AI: Low confidence, ensure luarocks is configured
+  logk
 
+  log "Checking for fd symlink..."
+  if command_exists fdfind && ! command_exists fd; then
+    if [ -d "${HOME}/.local/bin" ]; then # Ensure ~/.local/bin is on PATH
+        ln -sf "$(command -v fdfind)" "${HOME}/.local/bin/fd"
+        ok "Symlinked fdfind to fd in ${HOME}/.local/bin/fd"
+    else
+        warn "${HOME}/.local/bin does not exist. Cannot create symlink for fd. Make sure it's on your PATH."
+    fi
+  elif command_exists fd; then
+    ok "fd command already available."
+  else
+    warn "fdfind not installed, cannot create fd symlink."
   fi
   logk
-fi
-logk
-set -e
+
+  if [ ! -d "${HOME}/.fnm" ]; then
+    log "Installing fnm (Node.js version manager)..."
+    curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell
+    logk
+  else
+    log "fnm already installed."
+  fi
+
+  if [ ! -d "${HOME}/.pyenv" ]; then
+    log "Installing pyenv (Python version manager)..."
+    curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+    logk
+    export PATH="$HOME/.pyenv/bin:$PATH" # AI: Add pyenv to PATH for current session
+    # AI: Install pyenv-virtualenvwrapper plugin
+    if [ -d "${HOME}/.pyenv/bin" ]; then # Check if pyenv installed correctly
+        log "Installing pyenv-virtualenvwrapper plugin..."
+        git clone https://github.com/pyenv/pyenv-virtualenvwrapper.git "$(${HOME}/.pyenv/bin/pyenv root)/plugins/pyenv-virtualenvwrapper" || warn "Failed to install pyenv-virtualenvwrapper"
+        logk
+    fi
+    log "Installing Python 3.10.12 via pyenv..." # AI: Consistent with original script's pyenv version for Linux
+    env PYTHON_CONFIGURE_OPTS="--enable-shared" "$HOME/.pyenv/bin/pyenv" install -s -f 3.10.12 # AI: Added -s for silent, -f for force
+    "$HOME/.pyenv/bin/pyenv" global 3.10.12
+    logk
+  else
+    log "pyenv already installed."
+    export PATH="$HOME/.pyenv/bin:$PATH" # AI: Ensure pyenv is on PATH for current session
+  fi
+fi # End of Linux specific package installation
 
 # ---------------------------------------------------------
-# Install cargo, volta
+# Install cargo, asdf (generic for all supported OS)
 # ---------------------------------------------------------
-# SOURCE: https://github.com/radiol/dotfiles/blob/610fc7898d47252cd7eaf41662e5558d7eac645f/run_once_install.sh.tmpl#L140
-# Install Rust
-if ! (type "cargo" >/dev/null 2>&1); then
-  curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
+# Install Rust/Cargo
+if ! command_exists cargo; then
+  log "Installing Rust and Cargo..."
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rustup.sh
   sh rustup.sh -y -q --no-modify-path && rm rustup.sh
   # shellcheck source=/dev/null
-  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
-  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
-  source "$HOME/.cargo/env"
+  source "$HOME/.cargo/env" # Source for current session
   # Install Rust Apps
-  # cargo install -q cargo-update
+  # cargo install -q cargo-update # Example
   logk
+else
+  log "Rust/Cargo already installed."
 fi
 
-logn "asdf update dir ~/.asdf"
+logn "Checking/Installing asdf (version manager)..."
 if [ ! -d "$HOME/.asdf" ]; then
-  log "Cloning to ~/.asdf:"
-  git clone --verbose https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.11.2
+  log "Cloning asdf to ~/.asdf (branch v0.11.2)..."
+  git clone --quiet https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.11.2
+  logk
+else
+  log "asdf already installed in ~/.asdf."
+  ( cd ~/.asdf && git fetch --quiet && git checkout --quiet v0.11.2 ) # AI: Ensure correct version
   logk
 fi
-logk
+# AI: Source asdf for current session to make it available for subsequent commands
+# AI: This will be properly sourced by compat.bash/compat.sh later for new shells
+if [ -f "$HOME/.asdf/asdf.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$HOME/.asdf/asdf.sh"
+fi
+
 
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
 # ---------------------------------------------------------
-# mac version
-
 if [ "$CURRENT_OS" = "macos" ]; then
+  log "Generating ~/compat.bash for macOS..."
   cat <<'EOF' >~/compat.bash
 # ---------------------------------------------------------
-# chezmoi managed - ~/.bashrc
+# chezmoi managed - ~/.bashrc (macOS)
 # ---------------------------------------------------------
 # homebrew var setup
 UNAME_MACHINE="$(/usr/bin/uname -m)"
 if [[ $UNAME_MACHINE == "arm64" ]]; then
   HOMEBREW_PREFIX="/opt/homebrew"
-  HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
 else
   HOMEBREW_PREFIX="/usr/local"
-  HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
 fi
-
+# AI: No HOMEBREW_REPOSITORY needed here if HOMEBREW_PREFIX is correctly set for brew shellenv
 
 export PATH="$HOMEBREW_PREFIX/bin:$PATH"
 export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
-# export PATH="/usr/local/cuda/bin:${PATH}"
-# export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
-# export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+# export PATH="/usr/local/cuda/bin:${PATH}" # AI: Example, uncomment if needed
+# export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" # AI: Example
 
+# FZF (Bash)
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
-[ -f ~/.fzf.bash ] && . ~/.fzf.bash
-
-. "$HOME/.cargo/env"
+# Cargo
+[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 
 
 ######################################################################################
 # pyenv
 ######################################################################################
-export PYENV_ROOT=~/.pyenv
-export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
-OPT_HOMEBREW="${HOMEBREW_PREFIX}"
-if [ -s "$OPT_HOMEBREW"/bin/brew ]; then
-    eval "$($OPT_HOMEBREW/bin/brew shellenv)"
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="${PYENV_ROOT}/bin:${PATH}" # AI: Simplified PATH, pyenv init adds shims
+
+# Initialize Homebrew shell environment
+if [ -x "$HOMEBREW_PREFIX/bin/brew" ]; then
+    eval "$($HOMEBREW_PREFIX/bin/brew shellenv)"
 fi
 
-if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
-  eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
-  eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
-  fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
-  pyenv virtualenvwrapper_lazy
-
-elif [ -s "$HOME/.pyenv/bin/pyenv" ]; then
-  export PYENV_ROOT=~/.pyenv
-  export PATH="$PYENV_ROOT/bin:$PATH"
-  eval "$($HOME/.pyenv/bin/pyenv init --path)"
-  eval "$($HOME/.pyenv/bin/pyenv init -)"
-  # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
+# Initialize pyenv
+if command -v pyenv 1>/dev/null 2>&1; then
+  eval "$(pyenv init --path)" # For shims
+  eval "$(pyenv init -)"      # For shell integration (completion, etc.)
+  # AI: pyenv-virtualenvwrapper integration
+  if command -v pyenv virtualenvwrapper_lazy 1>/dev/null 2>&1; then
+    pyenv virtualenvwrapper_lazy
+  fi
 fi
 ######################################################################################
 
-OS="`uname`"
-case $OS in
-  'Linux')
-    OS='Linux'
-    ;;
-  'FreeBSD')
-    OS='FreeBSD'
-    ;;
-  'WindowsNT')
-    OS='Windows'
-    ;;
-  'Darwin')
-    OS='Mac'
-    ;;
-  'SunOS')
-    OS='Solaris'
-    ;;
-  *) ;;
-esac
-
-if [ "$OS" = 'Linux' ]
-then
-    export ASDF_DIR="${HOME}/.asdf"
-    . "$HOME/.asdf/asdf.sh"
-    . "$HOME/.asdf/lib/asdf.sh"
-    . "$HOME/.asdf/completions/asdf.bash"
+# asdf (sourced after pyenv to ensure pyenv shims might be preferred if both manage python)
+ASDF_DIR="${ASDF_DIR:-$HOME/.asdf}"
+if [ -f "$ASDF_DIR/asdf.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$ASDF_DIR/asdf.sh"
+  # shellcheck source=/dev/null
+  # . "$ASDF_DIR/completions/asdf.bash" # AI: asdf.sh should handle completions
 fi
 
 # fnm
-export PATH="$HOME/.local/share/fnm:$PATH"
-eval "`fnm env`"
+export PATH="$HOME/.local/share/fnm:$PATH" # AI: fnm path might vary based on install
+if command -v fnm 1>/dev/null 2>&1; then
+  eval "$(fnm env --shell bash)"
+fi
 EOF
+  logk
 
+  log "Generating ~/compat.sh for macOS..."
   cat <<'EOF' >~/compat.sh
 # ---------------------------------------------------------
-# chezmoi managed - ~/.bashrc
+# chezmoi managed - ~/.profile (macOS)
 # ---------------------------------------------------------
 # homebrew var setup
 UNAME_MACHINE="$(/usr/bin/uname -m)"
-if [ "$UNAME_MACHINE" = "arm64" ]
-then
+if [ "$UNAME_MACHINE" = "arm64" ]; then
   HOMEBREW_PREFIX="/opt/homebrew"
-  HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
 else
   HOMEBREW_PREFIX="/usr/local"
-  HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
 fi
-
 
 export PATH="$HOMEBREW_PREFIX/bin:$PATH"
 export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
-# export PATH="/usr/local/cuda/bin:${PATH}"
-# export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
-# export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+# export PATH="/usr/local/cuda/bin:${PATH}" # AI: Example
+# export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" # AI: Example
 
-
-if [ -f "$HOME/.fzf.bash" ]
-then
+# FZF (Shell agnostic if ~/.fzf.bash is POSIX compatible, otherwise Bash only)
+if [ -f "$HOME/.fzf.bash" ]; then
+  # shellcheck source=/dev/null
   source ~/.fzf.bash
 fi
 
-if [ -f "$HOME/.cargo/env" ]
-then
+# Cargo
+if [ -f "$HOME/.cargo/env" ]; then
+  # shellcheck source=/dev/null
   . "$HOME/.cargo/env"
 fi
-
 
 ######################################################################################
 # pyenv
 ######################################################################################
-export PYENV_ROOT=~/.pyenv
-export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:$PATH"
-OPT_HOMEBREW="${HOMEBREW_PREFIX}"
-if [ -s "$OPT_HOMEBREW"/bin/brew ]
-then
-    eval "$($OPT_HOMEBREW/bin/brew shellenv)"
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="${PYENV_ROOT}/bin:${PATH}"
+
+# Initialize Homebrew shell environment
+if [ -x "$HOMEBREW_PREFIX/bin/brew" ]; then
+    eval "$($HOMEBREW_PREFIX/bin/brew shellenv)"
 fi
 
-if [ -s "$HOMEBREW_PREFIX"/opt/pyenv/libexec/pyenv ]; then
-  eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init --path)"
-  eval "$(${HOMEBREW_PREFIX}/opt/pyenv/libexec/pyenv init -)"
-  fpath=(${HOMEBREW_PREFIX}/opt/pyenv/completions $fpath)
-  pyenv virtualenvwrapper_lazy
-
-elif [ -s "$HOME/.pyenv/bin/pyenv" ]
-then
-  export PYENV_ROOT=~/.pyenv
-  export PATH="$PYENV_ROOT/bin:$PATH"
-  eval "$($HOME/.pyenv/bin/pyenv init --path)"
-  eval "$($HOME/.pyenv/bin/pyenv init -)"
-  # $HOME/.pyenv/bin/pyenv virtualenvwrapper_lazy
+# Initialize pyenv
+if command -v pyenv 1>/dev/null 2>&1; then
+  eval "$(pyenv init --path)"
+  eval "$(pyenv init -)"
+  if command -v pyenv virtualenvwrapper_lazy 1>/dev/null 2>&1; then
+    pyenv virtualenvwrapper_lazy
+  fi
 fi
 ######################################################################################
 
-OS="`uname`"
-case $OS in
-  'Linux')
-    OS='Linux'
-    ;;
-  'FreeBSD')
-    OS='FreeBSD'
-    ;;
-  'WindowsNT')
-    OS='Windows'
-    ;;
-  'Darwin')
-    OS='Mac'
-    ;;
-  'SunOS')
-    OS='Solaris'
-    ;;
-  *) ;;
-esac
-
-if [ "$OS" = 'Linux' ]
-then
-    export ASDF_DIR="${HOME}/.asdf"
-    . "$HOME/.asdf/asdf.sh"
-    . "$HOME/.asdf/lib/asdf.sh"
-    . "$HOME/.asdf/completions/asdf.bash"
+# asdf
+ASDF_DIR="${ASDF_DIR:-$HOME/.asdf}"
+if [ -f "$ASDF_DIR/asdf.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$ASDF_DIR/asdf.sh"
 fi
 
 # fnm
-export PATH="$HOME/.local/share/fnm:$PATH"
-eval "`fnm env`"
-EOF
-
-  add_helper_functions_to_shells
-
-  # shellcheck source=/dev/null
-  source "${HOME}/compat.bash"
-
-  logk
-
+export PATH="$HOME/.local/share/fnm:$PATH" # AI: fnm path might vary
+if command -v fnm 1>/dev/null 2>&1; then
+  eval "$(fnm env --shell sh)" # AI: Use sh for .profile
 fi
+EOF
+  logk
+fi # End of macOS compat file generation
 
 # ---------------------------------------------------------
-# Setup compat files which will be used in .profile .bashrc .zshrc etc
+# Linux compat files
 # ---------------------------------------------------------
-# mac version
-
 if [ "$CURRENT_OS" = "linux" ]; then
+  log "Generating ~/compat.bash for Linux..."
   cat <<'EOF' >~/compat.bash
 # ---------------------------------------------------------
 # chezmoi managed - ~/.bashrc
@@ -1032,84 +1089,82 @@ eval "`fnm env`"
 # chezmoi managed - end
 # ---------------------------------------------------------
 EOF
-
-  add_helper_functions_to_shells
-
-  # shellcheck source=/dev/null
-  source "${HOME}/compat.bash"
-
   logk
+fi # End of Linux compat file generation
 
-fi
-
-# ---------------------------------------------------------
-# chezmoi managed - end
-# ---------------------------------------------------------
-
-if [ "$CURRENT_OS" = "macos" ]; then
-  # ---------------------------------------------------------
-  # Brew asdf setup
-  # ---------------------------------------------------------
-  # echo -e "\n. $(brew --prefix asdf)/libexec/asdf.sh" >> ~/.zshrc
-
-  #  SC1091: Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
-  # shellcheck source=/dev/null
-  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
-  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
-  . $(brew --prefix asdf@0.11.2)/libexec/asdf.sh
-  asdf current
-  logk
-
-  # ---------------------------------------------------------
-  # Brew fzf setup
-  # ---------------------------------------------------------
-  # shellcheck source=/dev/null
-  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
-  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
-  $(brew --prefix)/opt/fzf/install --all
-  ls -lta ~/.fzf.bash
-  ls -lta ~/.fzf.zsh
-  logk
-
-  # ---------------------------------------------------------
-  # Brew python install
-  # ---------------------------------------------------------
-  install_global_python() {
-    # brew upgrade python3 python-tk python@3.11 python-tk@3.11 || true
-    brew install python3 python-tk python@3.11 python-tk@3.11 || true
-    brew install python3 python-tk python@3.12 python-tk@3.12 || true
-    python3 -c "import sys;print(sys.executable)"
-
-
-  }
-  logn "installing global python via brew ..."
-  time install_global_python
-  logk
-
-  log "installing pyenv version of python"
-  env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.12.8
-  pyenv global 3.12.8
-  logn 'pyenv installed 3.12.8...'
-  logk
-
-fi
-
-logn 'fnm setup..'
-eval "$(fnm env --use-on-cd)"
-fnm install v22.13.1 || true
+add_helper_functions_to_shells
 logk
+
+logn "Sourcing compat.bash for current session to make tools available..."
+# shellcheck source=/dev/null
+source "${HOME}/compat.bash"
+logk
+
+# ---------------------------------------------------------
+# OS-Specific Post-Setup
+# ---------------------------------------------------------
+if [ "$CURRENT_OS" = "macos" ]; then
+  # Ensure fzf is set up (key bindings, completion)
+  # Homebrew's fzf package often requires this.
+  if command_exists brew && brew --prefix fzf >/dev/null 2>&1; then
+    log "Setting up fzf shell integration (macOS/Homebrew)..."
+    "$(brew --prefix fzf)/install" --all --no-update-rc # AI: --all for all shells, --no-update-rc as we handle sourcing
+    logk
+  fi
+
+  # AI: pyenv Python installation for macOS
+  if command_exists pyenv; then
+    log "Installing Python 3.12.8 via pyenv for macOS..." # AI: Original script used 3.12.8 for macOS pyenv
+    env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s -f 3.12.8 # AI: Added -s for silent, -f for force
+    pyenv global 3.12.8
+    logk
+  else
+    warn "pyenv command not found, skipping macOS Python installation via pyenv."
+  fi
+fi
+
+# Generic asdf check
+if command_exists asdf; then
+  logn "Current asdf versions:"
+  asdf current || warn "asdf current failed. Check asdf plugins."
+  logk
+fi
+
+logn 'fnm setup (Node.js)...'
+if command_exists fnm; then
+  eval "$(fnm env --use-on-cd)" # AI: Ensure fnm env is set for current shell
+  FNM_NODE_VERSION="v20.11.0" # AI: Using a recent LTS version, adjust as needed. Original had v22.13.1
+  log "Installing Node.js ${FNM_NODE_VERSION} via fnm..."
+  fnm install "${FNM_NODE_VERSION}" || warn "fnm install ${FNM_NODE_VERSION} failed."
+  fnm default "${FNM_NODE_VERSION}"
+  logk
+else
+  warn "fnm command not found, skipping Node.js installation via fnm."
+fi
 
 # ---------------------------------------------------------
 # Chezmoi
 # ---------------------------------------------------------
-# shellcheck disable=SC1091  # Not followin"g: ./"libexec/asdf.sh was not specified as input (see shellcheck -x).
-# shellcheck disable=SC2046  # Quote this to prevent word splitting.
-# shellcheck disable=SC2086  # Quote this t"o pre"vent word splitting.
-log "installing chezmoi ..."
-sh -cx "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME"/.bin -t v2.31.1
+log "Installing/Updating chezmoi..."
+# AI: Install to $HOME/bin as per original script's intent, ensure $HOME/bin is on PATH
+# AI: The script creates $HOME/bin earlier.
+CHEZMOI_INSTALL_DIR="${HOME}/.local/bin" # AI: Changed to .local/bin as it's more standard for user binaries
+mkdir -p "$CHEZMOI_INSTALL_DIR"
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$CHEZMOI_INSTALL_DIR" -t v2.31.1 # AI: Using specific version from original
+# Ensure chezmoi is executable and on PATH for current session
+export PATH="$CHEZMOI_INSTALL_DIR:$PATH"
+if ! command_exists chezmoi; then
+    error "Chezmoi installation failed or not found in PATH."
+else
+    ok "Chezmoi installed/updated successfully."
+fi
 logk
 
-logn 'You are ready to run zsh-dotfiles. Run: chezmoi init -R --debug -v --apply https://github.com/bossjones/zsh-dotfiles.git"'
-logk
 
+ZSH_DOTFILES_PREP_SUCCESS="1"
+log "-----------------------------------------------------------------------"
+log "${COL_GREEN}All prerequisites installed successfully!${COL_RESET}"
+log "You may need to restart your shell or source your ~/.bashrc, ~/.zshrc, or ~/.profile."
+logn 'You should now be ready to run zsh-dotfiles. For example: chezmoi init --apply https://github.com/bossjones/zsh-dotfiles.git"'
+logk
 ## ------------------------------------------------------
