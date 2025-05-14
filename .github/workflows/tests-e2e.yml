@@ -65,6 +65,9 @@ jobs:
   docker_tests:
     name: Test in ${{ matrix.container_name }} Container
     runs-on: ubuntu-latest
+    # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -104,6 +107,7 @@ jobs:
 
       - name: Run Script in Container
         run: |
+          set -x
           # Run the container with the script
           docker run --name test-container zsh-dotfiles-prereq:${{ matrix.image_tag }}
 
@@ -120,47 +124,6 @@ jobs:
           fi
 
           echo "✅ Script completed successfully"
-
-      # - name: Verify Installation
-      #   run: |
-      #     # Create verification script
-      #     cat > verify.sh << 'EOL'
-      #     #!/bin/bash
-      #     set -e
-
-      #     echo "Verifying essential directories and files..."
-      #     test -d ~/.asdf || true
-      #     test -d ~/.pyenv || true
-      #     test -d ~/.cargo || true
-      #     test -d ~/.local/bin || true
-      #     test -f ~/compat.bash || true
-      #     test -f ~/compat.sh || true
-
-      #     echo "Verifying environment setup..."
-      #     source ~/compat.bash
-
-      #     echo "Verifying tools are on PATH..."
-      #     which pyenv || true
-      #     which asdf || true
-      #     which cargo || true
-      #     which fnm || true
-      #     which git || true
-
-      #     echo "✅ All verifications passed!"
-      #     EOL
-
-      #     # Execute verification inside the container
-      #     docker exec test-container bash -c "chmod +x /zsh-dotfiles-prep/verify.sh && cd /home/testuser && /zsh-dotfiles-prep/verify.sh"
-
-      # - name: Test Idempotence
-      #   run: |
-      #     echo "Running script a second time to test idempotence..."
-      #     docker exec test-container bash -c "cd /zsh-dotfiles-prep && bin/zsh-dotfiles-prereq-installer-linux"
-
-      #     # Re-run verification to ensure everything still works
-      #     docker exec test-container bash -c "cd /home/testuser && /zsh-dotfiles-prep/verify.sh"
-
-      #     echo "✅ Idempotence test passed!"
 
       - name: Setup tmate debug session
         uses: mxschmitt/action-tmate@v3
