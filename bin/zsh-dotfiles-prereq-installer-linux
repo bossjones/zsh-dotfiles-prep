@@ -745,7 +745,6 @@ if [ "$CURRENT_OS" = "linux" ]; then
     hub \
     jq \
     less \
-    lesspipe \
     lsof \
     luarocks \
     moreutils \
