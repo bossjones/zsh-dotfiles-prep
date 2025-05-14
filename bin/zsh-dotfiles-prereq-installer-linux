@@ -87,7 +87,7 @@ if [ -n "$ZSH_DOTFILES_PREP_DEBUG" ]; then
 else
   ZSH_DOTFILES_PREP_QUIET_FLAG="-q"
   Q="$ZSH_DOTFILES_PREP_QUIET_FLAG"
-  # echo "${Q}" # AI: This echo seems unintentional, commenting out.
+  echo "${Q}"
 fi
 
 STDIN_FILE_DESCRIPTOR="0"
@@ -278,17 +278,17 @@ get_os() {
   elif [ "$os" = Linux ]; then
     # Further check for Debian/Ubuntu
     if [ -f /etc/os-release ]; then
-        # shellcheck source=/dev/null
-        source /etc/os-release
-        if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]; then
-            echo "linux" # Supported Linux
-        else
-            error "Unsupported Linux distribution: $ID"
-            exit 1
-        fi
-    else
-        error "Unsupported Linux distribution (unknown)"
+      # shellcheck source=/dev/null
+      source /etc/os-release
+      if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]; then
+        echo "linux" # Supported Linux
+      else
+        error "Unsupported Linux distribution: $ID"
         exit 1
+      fi
+    else
+      error "Unsupported Linux distribution (unknown)"
+      exit 1
     fi
   else
     error "unsupported OS: $os"
@@ -376,7 +376,6 @@ CURRENT_ARCH="$(get_arch)"
 # https://github.com/bitflight-devops/shell-scripts/blob/main/install.sh
 command_exists() { command -v "$@" >/dev/null 2>&1; }
 
-
 take_backup() {
   # Define a list of string variable
   # shellcheck disable=SC2088  # Tilde does not expand in quotes
@@ -442,7 +441,6 @@ elif [ "$CURRENT_OS" = "linux" ]; then
   groups | \grep -E "\b(sudo)\b" || abort "Add $USER to the sudo group (e.g., sudo usermod -aG sudo $USER)."
 fi
 
-
 # Set some basic security settings (macOS specific in original script).
 if [ "$CURRENT_OS" = "macos" ]; then
   logn "Configuring security settings (macOS):" # AI: Clarified this is macOS specific
@@ -450,7 +448,6 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # AI: If there were settings, they would go here.
   logk
 fi
-
 
 if [ "$CURRENT_OS" = "macos" ]; then
   # Install the Xcode Command Line Tools.
@@ -466,9 +463,9 @@ if [ "$CURRENT_OS" = "macos" ]; then
       sort -V |
       tail -n1)
     if [ -n "$CLT_PACKAGE" ]; then # AI: Check if package found
-        sudo_askpass softwareupdate -i "$CLT_PACKAGE"
+      sudo_askpass softwareupdate -i "$CLT_PACKAGE"
     else
-        warn "Could not find Xcode Command Line Tools package via softwareupdate -l."
+      warn "Could not find Xcode Command Line Tools package via softwareupdate -l."
     fi
     sudo_askpass rm -f "$CLT_PLACEHOLDER"
     if ! [ -f "/Library/Developer/CommandLineTools/usr/bin/git" ]; then
@@ -541,17 +538,16 @@ if [ "$CURRENT_OS" = "macos" ]; then
   HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || echo "$HOMEBREW_PREFIX_DEFAULT")"
   HOMEBREW_REPOSITORY="$(brew --repository 2>/dev/null || echo "$HOMEBREW_PREFIX_DEFAULT/Homebrew")" # AI: Adjusted default for repository if prefix is /opt/homebrew
 
-  if [[ "$UNAME_MACHINE" == "arm64" ]] && [[ "$HOMEBREW_PREFIX" == "/usr/local" ]]; then # AI: Ensure correct prefix for arm64
-      HOMEBREW_PREFIX="/opt/homebrew"
-      HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
-  elif [[ "$UNAME_MACHINE" != "arm64" ]] && [[ "$HOMEBREW_PREFIX" == "/opt/homebrew" ]]; then # AI: Ensure correct prefix for x86_64
-      HOMEBREW_PREFIX="/usr/local"
-      HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
-  elif [[ "$HOMEBREW_PREFIX" == "$HOMEBREW_PREFIX_DEFAULT" ]] && [[ "$HOMEBREW_REPOSITORY" == "$HOMEBREW_PREFIX_DEFAULT/Homebrew" ]] && [[ "$UNAME_MACHINE" == "arm64" ]]; then
-      # Handles case where brew --prefix might not be available yet but defaults are for x86_64
-      HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+  if [[ $UNAME_MACHINE == "arm64" ]] && [[ $HOMEBREW_PREFIX == "/usr/local" ]]; then # AI: Ensure correct prefix for arm64
+    HOMEBREW_PREFIX="/opt/homebrew"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
+  elif [[ $UNAME_MACHINE != "arm64" ]] && [[ $HOMEBREW_PREFIX == "/opt/homebrew" ]]; then # AI: Ensure correct prefix for x86_64
+    HOMEBREW_PREFIX="/usr/local"
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+  elif [[ $HOMEBREW_PREFIX == "$HOMEBREW_PREFIX_DEFAULT" ]] && [[ $HOMEBREW_REPOSITORY == "$HOMEBREW_PREFIX_DEFAULT/Homebrew" ]] && [[ $UNAME_MACHINE == "arm64" ]]; then
+    # Handles case where brew --prefix might not be available yet but defaults are for x86_64
+    HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
   fi
-
 
   [ -d "$HOMEBREW_PREFIX" ] || sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
   # AI: Original script had specific chown for /usr/local, this is more general for HOMEBREW_PREFIX
@@ -614,7 +610,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
       log "Installing software updates:"
       if [ -z "$ZSH_DOTFILES_PREP_CI" ]; then
         sudo_askpass softwareupdate --install --all --agree-to-license # AI: Added --agree-to-license
-        xcode_license # AI: Re-check license after updates
+        xcode_license                                                  # AI: Re-check license after updates
         logk
       else
         logskip "Software updates SKIPPED (for CI)"
@@ -671,10 +667,10 @@ add_helper_functions_to_bashrc() {
 
   # Add helper functions to profile
   local source_line="[ -f \"${this_script}\" ] && source \"${this_script}\""
-  touch ~/.bashrc || true # AI: Ensure .bashrc exists
+  touch ~/.bashrc || true                        # AI: Ensure .bashrc exists
   if ! grep -qF "${source_line}" ~/.bashrc; then # AI: Use -F for fixed string grep
     echo "Adding helper functions to ~/.bashrc"
-    echo "" >> ~/.bashrc # AI: Add a newline for separation
+    echo "" >>~/.bashrc # AI: Add a newline for separation
     echo "${source_line}" >>~/.bashrc
   fi
 }
@@ -688,7 +684,7 @@ add_helper_functions_to_profile() {
   touch ~/.profile || true
   if ! grep -qF "${source_line}" ~/.profile; then # AI: Use -F for fixed string grep
     echo "Adding helper functions to ~/.profile"
-    echo "" >> ~/.profile # AI: Add a newline for separation
+    echo "" >>~/.profile # AI: Add a newline for separation
     echo "${source_line}" >>~/.profile
   fi
 }
@@ -709,13 +705,13 @@ if [ "$CURRENT_OS" = "linux" ]; then
   log "Detected $NAME $VERSION_ID"
 
   # (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
-	# && sudo mkdir -p -m 755 /etc/apt/keyrings \
+  # && sudo mkdir -p -m 755 /etc/apt/keyrings \
   #       && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
   #       && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-	# && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-	# && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-	# && sudo apt update \
-	# && sudo apt install gh -y
+  # && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+  # && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+  # && sudo apt update \
+  # && sudo apt install gh -y
 
   log "Updating package list and installing prerequisites for $NAME..."
   sudo_askpass apt-get update -y
@@ -784,19 +780,19 @@ if [ "$CURRENT_OS" = "linux" ]; then
     cheat \
     diff-so-fancy \
     git-delta
-    # AI: Low confidence: fpp (Facebook PathPicker) - typically pip install fpp. Not in main repos.
-    # sudo_askpass pip3 install fpp # AI: Low confidence, ensure pip3 is available or install python3-pip
-    # AI: Low confidence: luv (Lua binding for libuv) - typically luarocks install luv
-    # sudo_askpass luarocks install luv # AI: Low confidence, ensure luarocks is configured
+  # AI: Low confidence: fpp (Facebook PathPicker) - typically pip install fpp. Not in main repos.
+  # sudo_askpass pip3 install fpp # AI: Low confidence, ensure pip3 is available or install python3-pip
+  # AI: Low confidence: luv (Lua binding for libuv) - typically luarocks install luv
+  # sudo_askpass luarocks install luv # AI: Low confidence, ensure luarocks is configured
   logk
 
   log "Checking for fd symlink..."
   if command_exists fdfind && ! command_exists fd; then
     if [ -d "${HOME}/.local/bin" ]; then # Ensure ~/.local/bin is on PATH
-        ln -sf "$(command -v fdfind)" "${HOME}/.local/bin/fd"
-        ok "Symlinked fdfind to fd in ${HOME}/.local/bin/fd"
+      ln -sf "$(command -v fdfind)" "${HOME}/.local/bin/fd"
+      ok "Symlinked fdfind to fd in ${HOME}/.local/bin/fd"
     else
-        warn "${HOME}/.local/bin does not exist. Cannot create symlink for fd. Make sure it's on your PATH."
+      warn "${HOME}/.local/bin does not exist. Cannot create symlink for fd. Make sure it's on your PATH."
     fi
   elif command_exists fd; then
     ok "fd command already available."
@@ -820,11 +816,11 @@ if [ "$CURRENT_OS" = "linux" ]; then
     export PATH="$HOME/.pyenv/bin:$PATH" # AI: Add pyenv to PATH for current session
     # AI: Install pyenv-virtualenvwrapper plugin
     if [ -d "${HOME}/.pyenv/bin" ]; then # Check if pyenv installed correctly
-        log "Installing pyenv-virtualenvwrapper plugin..."
-        git clone https://github.com/pyenv/pyenv-virtualenvwrapper.git "$(${HOME}/.pyenv/bin/pyenv root)/plugins/pyenv-virtualenvwrapper" || warn "Failed to install pyenv-virtualenvwrapper"
-        logk
+      log "Installing pyenv-virtualenvwrapper plugin..."
+      git clone https://github.com/pyenv/pyenv-virtualenvwrapper.git "$("${HOME}"/.pyenv/bin/pyenv root)/plugins/pyenv-virtualenvwrapper" || warn "Failed to install pyenv-virtualenvwrapper"
+      logk
     fi
-    log "Installing Python 3.10.12 via pyenv..." # AI: Consistent with original script's pyenv version for Linux
+    log "Installing Python 3.10.12 via pyenv..."                                               # AI: Consistent with original script's pyenv version for Linux
     env PYTHON_CONFIGURE_OPTS="--enable-shared" "$HOME/.pyenv/bin/pyenv" install -s -f 3.10.12 # AI: Added -s for silent, -f for force
     "$HOME/.pyenv/bin/pyenv" global 3.10.12
     logk
@@ -840,7 +836,7 @@ fi # End of Linux specific package installation
 # Install Rust/Cargo
 if ! command_exists cargo; then
   log "Installing Rust and Cargo..."
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rustup.sh
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs >rustup.sh
   sh rustup.sh -y -q --no-modify-path && rm rustup.sh
   # shellcheck source=/dev/null
   source "$HOME/.cargo/env" # Source for current session
@@ -858,16 +854,15 @@ if [ ! -d "$HOME/.asdf" ]; then
   logk
 else
   log "asdf already installed in ~/.asdf."
-  ( cd ~/.asdf && git fetch --quiet && git checkout --quiet v0.11.2 ) # AI: Ensure correct version
+  (cd ~/.asdf && git fetch --quiet && git checkout --quiet v0.11.2) # AI: Ensure correct version
   logk
 fi
 # AI: Source asdf for current session to make it available for subsequent commands
 # AI: This will be properly sourced by compat.bash/compat.sh later for new shells
 if [ -f "$HOME/.asdf/asdf.sh" ]; then
-    # shellcheck source=/dev/null
-    . "$HOME/.asdf/asdf.sh"
+  # shellcheck source=/dev/null
+  . "$HOME/.asdf/asdf.sh"
 fi
-
 
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
@@ -1123,7 +1118,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
 
   # AI: pyenv Python installation for macOS
   if command_exists pyenv; then
-    log "Installing Python 3.12.8 via pyenv for macOS..." # AI: Original script used 3.12.8 for macOS pyenv
+    log "Installing Python 3.12.8 via pyenv for macOS..."                  # AI: Original script used 3.12.8 for macOS pyenv
     env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s -f 3.12.8 # AI: Added -s for silent, -f for force
     pyenv global 3.12.8
     logk
@@ -1142,7 +1137,7 @@ fi
 logn 'fnm setup (Node.js)...'
 if command_exists fnm; then
   eval "$(fnm env --use-on-cd)" # AI: Ensure fnm env is set for current shell
-  FNM_NODE_VERSION="v20.11.0" # AI: Using a recent LTS version, adjust as needed. Original had v22.13.1
+  FNM_NODE_VERSION="v20.11.0"   # AI: Using a recent LTS version, adjust as needed. Original had v22.13.1
   log "Installing Node.js ${FNM_NODE_VERSION} via fnm..."
   fnm install "${FNM_NODE_VERSION}" || warn "fnm install ${FNM_NODE_VERSION} failed."
   fnm default "${FNM_NODE_VERSION}"
@@ -1163,12 +1158,11 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$CHEZMOI_INSTALL_DIR" -t v2.31.1 # A
 # Ensure chezmoi is executable and on PATH for current session
 export PATH="$CHEZMOI_INSTALL_DIR:$PATH"
 if ! command_exists chezmoi; then
-    error "Chezmoi installation failed or not found in PATH."
+  error "Chezmoi installation failed or not found in PATH."
 else
-    ok "Chezmoi installed/updated successfully."
+  ok "Chezmoi installed/updated successfully."
 fi
 logk
-
 
 ZSH_DOTFILES_PREP_SUCCESS="1"
 log "-----------------------------------------------------------------------"

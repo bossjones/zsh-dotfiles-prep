@@ -357,7 +357,6 @@ is_file_or_folder() {
 # https://github.com/bitflight-devops/shell-scripts/blob/main/install.sh
 command_exists() { command -v "$@" >/dev/null 2>&1; }
 
-
 take_backup() {
   # Define a list of string variable
   # shellcheck disable=SC2088  # Tilde does not expand in quotes
@@ -424,7 +423,6 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # Set some basic security settings.
   logn "Configuring security settings:"
 fi
-
 
 if [ "$CURRENT_OS" = "macos" ]; then
 
@@ -1079,7 +1077,6 @@ if [ "$CURRENT_OS" = "macos" ]; then
     brew install python3 python-tk python@3.11 python-tk@3.11 || true
     brew install python3 python-tk python@3.12 python-tk@3.12 || true
     python3 -c "import sys;print(sys.executable)"
-
 
   }
   logn "installing global python via brew ..."
