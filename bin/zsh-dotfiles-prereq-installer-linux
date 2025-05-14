@@ -704,15 +704,6 @@ if [ "$CURRENT_OS" = "linux" ]; then
   source /etc/os-release # ID and VERSION_ID will be available
   log "Detected $NAME $VERSION_ID"
 
-  # (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
-  # && sudo mkdir -p -m 755 /etc/apt/keyrings \
-  #       && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-  #       && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-  # && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-  # && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-  # && sudo apt update \
-  # && sudo apt install gh -y
-
   log "Updating package list and installing prerequisites for $NAME..."
   sudo_askpass apt-get update -y
   # AI: Consolidated and expanded apt package list
@@ -777,14 +768,37 @@ if [ "$CURRENT_OS" = "linux" ]; then
     zsh \
     ruby-build \
     rbenv \
-    cheat \
-    diff-so-fancy \
-    git-delta
-  # AI: Low confidence: fpp (Facebook PathPicker) - typically pip install fpp. Not in main repos.
-  # sudo_askpass pip3 install fpp # AI: Low confidence, ensure pip3 is available or install python3-pip
-  # AI: Low confidence: luv (Lua binding for libuv) - typically luarocks install luv
-  # sudo_askpass luarocks install luv # AI: Low confidence, ensure luarocks is configured
+    golang-go
   logk
+
+  # # Install snap if not already installed
+  # if ! command_exists snap; then
+  #   log "Installing snapd..."
+  #   sudo_askpass apt-get install -y snapd
+  #   sudo_askpass systemctl enable --now snapd.socket
+  #   logk
+  # fi
+
+  # # Install diff-so-fancy via npm
+  # if ! command_exists diff-so-fancy; then
+  #   log "Installing diff-so-fancy via npm..."
+  #   sudo_askpass npm install -g diff-so-fancy
+  #   logk
+  # fi
+
+  # # Install git-delta via cargo
+  # if ! command_exists delta; then
+  #   log "Installing git-delta (delta) via cargo..."
+  #   cargo install git-delta
+  #   logk
+  # fi
+
+  # # Install cheat via go
+  # if ! command_exists cheat; then
+  #   log "Installing cheat via go..."
+  #   go install github.com/cheat/cheat/cmd/cheat@latest
+  #   logk
+  # fi
 
   log "Checking for fd symlink..."
   if command_exists fdfind && ! command_exists fd; then
