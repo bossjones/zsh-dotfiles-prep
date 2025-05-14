@@ -26,6 +26,7 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-prep
+  DEBIAN_FRONTEND: noninteractive
 
 jobs:
   style:
