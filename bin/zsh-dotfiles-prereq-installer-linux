@@ -1156,7 +1156,7 @@ fi
 logn 'fnm setup (Node.js)...'
 if command_exists fnm; then
   eval "$(fnm env --use-on-cd)" # AI: Ensure fnm env is set for current shell
-  FNM_NODE_VERSION="v20.11.0"   # AI: Using a recent LTS version, adjust as needed. Original had v22.13.1
+  FNM_NODE_VERSION="v22.13.1"   # AI: Using a recent LTS version, adjust as needed. Original had v22.13.1
   log "Installing Node.js ${FNM_NODE_VERSION} via fnm..."
   fnm install "${FNM_NODE_VERSION}" || warn "fnm install ${FNM_NODE_VERSION} failed."
   fnm default "${FNM_NODE_VERSION}"
@@ -1165,23 +1165,25 @@ else
   warn "fnm command not found, skipping Node.js installation via fnm."
 fi
 
+
+logn 'fnm setup..'
+eval "$(fnm env --use-on-cd)"
+fnm install v22.13.1 || true
+logk
+
 # ---------------------------------------------------------
 # Chezmoi
 # ---------------------------------------------------------
-log "Installing/Updating chezmoi..."
-# AI: Install to $HOME/bin as per original script's intent, ensure $HOME/bin is on PATH
-# AI: The script creates $HOME/bin earlier.
-CHEZMOI_INSTALL_DIR="${HOME}/.local/bin" # AI: Changed to .local/bin as it's more standard for user binaries
-mkdir -p "$CHEZMOI_INSTALL_DIR"
-sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$CHEZMOI_INSTALL_DIR" -t v2.31.1 # AI: Using specific version from original
-# Ensure chezmoi is executable and on PATH for current session
-export PATH="$CHEZMOI_INSTALL_DIR:$PATH"
-if ! command_exists chezmoi; then
-  error "Chezmoi installation failed or not found in PATH."
-else
-  ok "Chezmoi installed/updated successfully."
-fi
+# shellcheck disable=SC1091  # Not followin"g: ./"libexec/asdf.sh was not specified as input (see shellcheck -x).
+# shellcheck disable=SC2046  # Quote this to prevent word splitting.
+# shellcheck disable=SC2086  # Quote this t"o pre"vent word splitting.
+log "installing chezmoi ..."
+sh -cx "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME"/.bin -t v2.31.1
 logk
+
+logn 'You are ready to run zsh-dotfiles. Run: chezmoi init -R --debug -v --apply https://github.com/bossjones/zsh-dotfiles.git"'
+logk
+
 
 ZSH_DOTFILES_PREP_SUCCESS="1"
 log "-----------------------------------------------------------------------"

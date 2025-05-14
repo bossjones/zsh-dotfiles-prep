@@ -1,5 +1,8 @@
 # tests.yml
 name: CI
+permissions:
+  pull-requests: read
+  contents: read
 on:
   push:
     branches:
@@ -24,8 +27,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number|| github.sha }}
   cancel-in-progress: true
 
-permissions:
-  pull-requests: read
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-prep
+  DEBIAN_FRONTEND: noninteractive
 jobs:
   style:
     runs-on: ubuntu-22.04
@@ -120,7 +125,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y elvish fish zsh zsh-doc manpages manpages-dev
-
 
       - name: Run bin/zsh-dotfiles-prereq-installer
         run: bin/zsh-dotfiles-prereq-installer

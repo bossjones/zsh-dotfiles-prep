@@ -44,24 +44,25 @@ jobs:
       - name: Install shfmt
         run: brew install shfmt
 
-      - run: contrib/style.sh
+      - name: Run style check
+        run: contrib/style.sh
 
-  determine_changes:
-    name: Determine changes
-    runs-on: macOS-latest
-    permissions:
-      pull-requests: read
-    steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
+  # determine_changes:
+  #   name: Determine changes
+  #   runs-on: macOS-latest
+  #   permissions:
+  #     pull-requests: read
+  #   steps:
+  #     - name: Dump GitHub context
+  #       env:
+  #         GITHUB_CONTEXT: ${{ toJson(github) }}
+  #       run: echo "$GITHUB_CONTEXT"
+  #     - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+  #     - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #         persist-credentials: false
 
   docker_tests:
     name: Test in ${{ matrix.container_name }} Container
