@@ -82,7 +82,6 @@ ZSH_DOTFILES_PREP_SUCCESS=""
 #   # fi
 # }
 
-
 sudo_askpass() {
   # Check if SUDO_ASKPASS environment variable is set.
   if [ -n "$SUDO_ASKPASS" ]; then
@@ -94,7 +93,6 @@ sudo_askpass() {
     sudo "$@"
   fi
 }
-
 
 # Define a cleanup function to be executed on script exit.
 cleanup() {
@@ -680,11 +678,11 @@ if [ "$CURRENT_OS" = "macos" ]; then
 
     # Find the latest Command Line Tools package available via softwareupdate.
     CLT_PACKAGE=$(softwareupdate -l |
-      grep -B 1 "Command Line Tools" | # Find lines matching "Command Line Tools" and the line before.
-      awk -F"*" '/^ *\*/ {print $2}' | # Extract the package label.
+      grep -B 1 "Command Line Tools" |       # Find lines matching "Command Line Tools" and the line before.
+      awk -F"*" '/^ *\*/ {print $2}' |       # Extract the package label.
       sed -e 's/^ *Label: //' -e 's/^ *//' | # Clean up the label string.
-      sort -V | # Sort package versions.
-      tail -n1) # Get the latest version.
+      sort -V |                              # Sort package versions.
+      tail -n1)                              # Get the latest version.
     # Check if a Command Line Tools package was found.
     if [ -n "$CLT_PACKAGE" ]; then # AI: Check if package found
       # Install the found package using sudo and softwareupdate.
@@ -915,7 +913,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
         # Install all software updates with sudo, agreeing to the license.
         sudo_askpass softwareupdate --install --all --agree-to-license # AI: Added --agree-to-license
         # Re-check Xcode license after updates.
-        xcode_license                                                  # AI: Re-check license after updates
+        xcode_license # AI: Re-check license after updates
         # Log successful installation of updates.
         logk
       # If in a CI environment.
@@ -1008,7 +1006,7 @@ add_helper_functions_to_bashrc() {
   # Define the line to be added to ~/.bashrc to source the compatibility script.
   local source_line="[ -f \"${this_script}\" ] && source \"${this_script}\""
   # Ensure ~/.bashrc file exists, creating it if necessary.
-  touch ~/.bashrc || true                        # AI: Ensure .bashrc exists
+  touch ~/.bashrc || true # AI: Ensure .bashrc exists
   # Check if the source line is not already present in ~/.bashrc (fixed string search).
   if ! grep -qF "${source_line}" ~/.bashrc; then # AI: Use -F for fixed string grep
     # Print a message about adding helper functions to ~/.bashrc.
@@ -1653,7 +1651,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
   # Check if pyenv command exists.
   if command_exists pyenv; then
     # Log installing Python 3.12.8 via pyenv for macOS.
-    log "Installing Python 3.12.8 via pyenv for macOS..."                  # AI: Original script used 3.12.8 for macOS pyenv
+    log "Installing Python 3.12.8 via pyenv for macOS..." # AI: Original script used 3.12.8 for macOS pyenv
     # Set Python configure options and install Python 3.12.8 silently and forcefully.
     env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s -f 3.12.8 # AI: Added -s for silent, -f for force
     # Set Python 3.12.8 as the global default version.
@@ -1685,7 +1683,7 @@ if command_exists fnm; then
   # Ensure fnm environment is set for the current shell, enabling use-on-cd.
   eval "$(fnm env --use-on-cd)" # AI: Ensure fnm env is set for current shell
   # Define the Node.js version to install.
-  FNM_NODE_VERSION="v22.13.1"   # AI: Using a recent LTS version, adjust as needed. Original had v22.13.1
+  FNM_NODE_VERSION="v22.13.1" # AI: Using a recent LTS version, adjust as needed. Original had v22.13.1
   # Log installing the specified Node.js version via fnm.
   log "Installing Node.js ${FNM_NODE_VERSION} via fnm..."
   # Install the Node.js version, or warn if installation fails.
