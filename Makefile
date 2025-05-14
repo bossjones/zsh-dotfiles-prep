@@ -60,7 +60,7 @@ docker-run-test-debug:
 		echo "Error: IMAGE_TAG is not set. Usage: make docker-run-test IMAGE_TAG=debian-12"; \
 		exit 1; \
 	fi
-	docker run --rm --name test-container $(REGISTRY_IMAGE):$(IMAGE_TAG) bin/zsh-dotfiles-prereq-installer-linux --debug
+	docker run --rm --name test-container  -e SUDO_ASKPASS=password  -e ZSH_DOTFILES_PREP_GIT_NAME="Malcolm Jones" -e ZSH_DOTFILES_PREP_GIT_EMAIL=bossjones@theblacktonystark.com -e ZSH_DOTFILES_PREP_GITHUB_USER=bossjones $(REGISTRY_IMAGE):$(IMAGE_TAG) bin/zsh-dotfiles-prereq-installer-linux --debug
 	docker logs test-container || true
 	@echo "✅ Test completed"
 
@@ -70,7 +70,7 @@ docker-run-test-bash:
 		echo "Error: IMAGE_TAG is not set. Usage: make docker-run-test IMAGE_TAG=debian-12"; \
 		exit 1; \
 	fi
-	docker run --rm -it --name test-container --entrypoint bash $(REGISTRY_IMAGE):$(IMAGE_TAG)
+	docker run --rm -it --name test-container --entrypoint bash -e SUDO_ASKPASS=password  -e ZSH_DOTFILES_PREP_GIT_NAME="Malcolm Jones" -e ZSH_DOTFILES_PREP_GIT_EMAIL=bossjones@theblacktonystark.com -e ZSH_DOTFILES_PREP_GITHUB_USER=bossjones $(REGISTRY_IMAGE):$(IMAGE_TAG)
 	docker logs test-container || true
 	@echo "✅ Test completed"
 

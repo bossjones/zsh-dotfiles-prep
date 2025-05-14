@@ -51,6 +51,7 @@ ENV LC_ALL=en_US.UTF-8
 # The user ID and group ID for the testuser (matches github actions user)
 ENV USER_UID=1001
 ENV USER_GID=121
+ENV SUDO_ASKPASS=password
 
 # Create a non-root user with sudo access
 # RUN useradd -m -s /bin/bash --uid $USER_UID --gid $USER_GID testuser && \

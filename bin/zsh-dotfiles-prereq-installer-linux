@@ -1,5 +1,3 @@
-Okay, I will add comments before each line of the zsh-dotfiles-prereq-installer-linux script to explain what it does.
-
 #!/usr/bin/env bash
 #/ Usage: bin/zsh-dotfiles-prereq-installer [--debug]
 #/ Install development dependencies on macOS, Debian 12, and Ubuntu 22.04.
@@ -66,23 +64,38 @@ set -e
 
 # Set DEBIAN_FRONTEND to noninteractive to prevent prompts during package installations on Debian/Ubuntu.
 export DEBIAN_FRONTEND=noninteractive
+export SUDO_ASKPASS=password
 
 # Check if the first argument is --debug or if xtrace option is already set, then set ZSH_DOTFILES_PREP_DEBUG to "1".
 [[ $1 == "--debug" || -o xtrace ]] && ZSH_DOTFILES_PREP_DEBUG="1"
 # Initialize a variable to track the success of the script.
 ZSH_DOTFILES_PREP_SUCCESS=""
 
-# Define a function to run commands with sudo, potentially using SUDO_ASKPASS if set (currently commented out).
+# # Define a function to run commands with sudo, potentially using SUDO_ASKPASS if set (currently commented out).
+# sudo_askpass() {
+#   # Check if SUDO_ASKPASS environment variable is set.
+#   # if [ -n "$SUDO_ASKPASS" ]; then
+#   #   Run sudo with the --askpass option, passing all arguments to sudo.
+#   #   sudo --askpass "$@"
+#   # else
+#   # Run sudo directly, passing all arguments to sudo.
+#   sudo "$@"
+#   # fi
+# }
+
+
 sudo_askpass() {
   # Check if SUDO_ASKPASS environment variable is set.
-  # if [ -n "$SUDO_ASKPASS" ]; then
-  #   Run sudo with the --askpass option, passing all arguments to sudo.
-  #   sudo --askpass "$@"
-  # else
-  # Run sudo directly, passing all arguments to sudo.
-  sudo "$@"
-  # fi
+  if [ -n "$SUDO_ASKPASS" ]; then
+    # Run sudo with the --askpass option, passing all arguments to sudo.
+    sudo --askpass "$@"
+  # If SUDO_ASKPASS environment variable is not set.
+  else
+    # Run sudo directly, passing all arguments to sudo.
+    sudo "$@"
+  fi
 }
+
 
 # Define a cleanup function to be executed on script exit.
 cleanup() {
