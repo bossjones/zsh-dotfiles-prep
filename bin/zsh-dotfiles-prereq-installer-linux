@@ -64,7 +64,6 @@ set -e
 
 # Set DEBIAN_FRONTEND to noninteractive to prevent prompts during package installations on Debian/Ubuntu.
 export DEBIAN_FRONTEND=noninteractive
-export SUDO_ASKPASS=password
 
 # Check if the first argument is --debug or if xtrace option is already set, then set ZSH_DOTFILES_PREP_DEBUG to "1".
 [[ $1 == "--debug" || -o xtrace ]] && ZSH_DOTFILES_PREP_DEBUG="1"

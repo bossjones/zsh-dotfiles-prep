@@ -37,7 +37,7 @@ docker-buildx:
 	fi
 	@echo "Building image for platform: $(PLATFORM)"
 	docker buildx build \
-		--platform linux/amd64,linux/arm64 \
+		--platform $(PLATFORM) \
 		--file ./$(DOCKERFILE) \
 		--tag $(REGISTRY_IMAGE):$(IMAGE_TAG) \
 		--tag $(REGISTRY_IMAGE):$(IMAGE_TAG)-$(shell git rev-parse --short HEAD) \
