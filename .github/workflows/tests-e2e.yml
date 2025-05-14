@@ -1,4 +1,4 @@
-# tests.yml
+# tests-e2e.yml
 name: CI-E2E
 permissions:
   pull-requests: read
