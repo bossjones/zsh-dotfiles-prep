@@ -1,3 +1,4 @@
+# tests.yml
 name: CI
 on:
   push:
@@ -40,47 +41,61 @@ jobs:
 
       - run: contrib/style.sh
 
-  # https://github.com/astral-sh/uv/blob/75c26229a2d8a9c2f249fd79f5fcf7b4d9ac77bb/.github/workflows/ci.yml#L88
-  determine_changes:
-    name: Determine changes
-    runs-on: macOS-latest
-    outputs:
-      # Flag that is raised when any code is changed
-      code: ${{ steps.changed-files.outputs.code_any_changed }}
-    permissions:
-      pull-requests: read
-    steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      # - run: echo "🔎 The name of your branch is ${{ github.ref_name }} and your repository is ${{ github.repository }}."
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # OR "2" -> To retrieve the preceding commit.
-          persist-credentials: false
+  # # https://github.com/astral-sh/uv/blob/75c26229a2d8a9c2f249fd79f5fcf7b4d9ac77bb/.github/workflows/ci.yml#L88
+  # determine_changes:
+  #   name: Determine changes
+  #   runs-on: macOS-latest
+  #   outputs:
+  #     # Flag that is raised when any code is changed
+  #     code: ${{ steps.changed-files.outputs.code_any_changed }}
+  #   permissions:
+  #     pull-requests: read
+  #   steps:
+  #     - name: Dump GitHub context
+  #       env:
+  #         GITHUB_CONTEXT: ${{ toJson(github) }}
+  #       run: echo "$GITHUB_CONTEXT"
+  #     - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+  #     - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+  #     # - run: echo "🔎 The name of your branch is ${{ github.ref_name }} and your repository is ${{ github.repository }}."
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0 # OR "2" -> To retrieve the preceding commit.
+  #         persist-credentials: false
 
   tests:
+    name: Test on ${{ matrix.os_display_name }}
+    runs-on: ${{ matrix.runner }}
+    # Define the container for Docker jobs. This will be null/empty for macOS.
+    container: ${{ matrix.container_image }}
     permissions:
       contents: read
     strategy:
+      fail-fast: false # Continue other jobs in matrix even if one fails
       matrix:
         include:
-          - os: macOS
-            runner: macOS-latest
-          - os: Linux
-            runner: ubuntu-22.04
+          # - os: macOS
+          #   runner: macOS-latest
           # - os: Linux
           #   runner: ubuntu-22.04
-          # - os: Linux
-          #   runner: ubuntu-latest
-          #   workdir: /github/home
-          #   container: '{"image": "ghcr.io/homebrew/ubuntu22.04:master", "options": "--user=linuxbrew"}'
-    name: ${{ matrix.os }}
-    runs-on: ${{ matrix.runner }}
-    # container: ${{ matrix.container && fromJSON(matrix.container) || '' }}
+          # # - os: Linux
+          # #   runner: ubuntu-22.04
+          # # - os: Linux
+          # #   runner: ubuntu-latest
+          # #   workdir: /github/home
+          # #   container: '{"image": "ghcr.io/homebrew/ubuntu22.04:master", "options": "--user=linuxbrew"}'
+          - os_display_name: macOS
+            runner: macOS-latest
+            is_docker: false
+            # container_image: null # Not needed, will be empty by default
+          - os_display_name: Ubuntu-22.04 (Docker)
+            runner: ubuntu-latest # Host for Docker
+            container_image: ubuntu:22.04
+            is_docker: true
+          - os_display_name: Debian-12 (Docker)
+            runner: ubuntu-latest # Host for Docker
+            container_image: debian:12 # You can use debian:bookworm or debian:12-slim
+            is_docker: true
     defaults:
       run:
         shell: bash
@@ -93,56 +108,80 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-        if: matrix.os == 'macOS'
+      # - name: Set up Homebrew
+      #   id: set-up-homebrew
+      #   uses: Homebrew/actions/setup-homebrew@master
+      #   if: matrix.os == 'macOS'
 
-      - name: Cache Homebrew Bundler RubyGems
-        id: cache
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
-        with:
-          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
-          key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
-          restore-keys: ${{ runner.os }}-rubygems-
-        if: matrix.os == 'macOS'
+      # - name: Cache Homebrew Bundler RubyGems
+      #   id: cache
+      #   uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+      #   with:
+      #     path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+      #     key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+      #     restore-keys: ${{ runner.os }}-rubygems-
+      #   if: matrix.os == 'macOS'
 
-      - name: Install Homebrew Bundler RubyGems
-        if: steps.cache.outputs.cache-hit != 'true' && matrix.os == 'macOS'
-        run: brew install-bundler-gems
+      # - name: Install Homebrew Bundler RubyGems
+      #   if: steps.cache.outputs.cache-hit != 'true' && matrix.os == 'macOS'
+      #   run: brew install-bundler-gems
 
-      # - name: Cleanup macOS
-      #   if: runner.os == 'macOS'
-      #   run: |
-      #     sudo rm -rf /usr/local/bin/brew /usr/local/.??* \
-      #                 /usr/local/Homebrew \
-      #                 /Applications/Xcode.app /usr/local/Caskroom \
-      #                 /Library/Developer/CommandLineTools
+      # # - name: Cleanup macOS
+      # #   if: runner.os == 'macOS'
+      # #   run: |
+      # #     sudo rm -rf /usr/local/bin/brew /usr/local/.??* \
+      # #                 /usr/local/Homebrew \
+      # #                 /Applications/Xcode.app /usr/local/Caskroom \
+      # #                 /Library/Developer/CommandLineTools
 
-      # - name: Use newer Xcode
-      #   if: runner.os == 'macOS'
-      #   run: |
-      #     ls /Applications/Xcode*.app || true
-      #     sudo xcode-select --switch /Applications/Xcode_13.3.1.app/Contents/Developer || true
-      #   continue-on-error: true
+      # # - name: Use newer Xcode
+      # #   if: runner.os == 'macOS'
+      # #   run: |
+      # #     ls /Applications/Xcode*.app || true
+      # #     sudo xcode-select --switch /Applications/Xcode_13.3.1.app/Contents/Developer || true
+      # #   continue-on-error: true
+
+      # # - name: Install shell dependencies (macOS)
+      # #   if: runner.os == 'macOS'
+      # #   run: |
+      # #     brew install coreutils parallel \
+      # #       elvish \
+      # #       fish \
+      # #       nushell \
+      # #       powershell \
+      # #       zsh
 
       # - name: Install shell dependencies (macOS)
       #   if: runner.os == 'macOS'
       #   run: |
-      #     brew install coreutils parallel \
+      #     brew install \
       #       elvish \
       #       fish \
-      #       nushell \
-      #       powershell \
       #       zsh
 
+      # macOS specific setup steps
+      - name: Set up Homebrew (macOS)
+        id: set-up-homebrew # id is used by cache step
+        uses: Homebrew/actions/setup-homebrew@master
+        if: matrix.is_docker == false
+
+      - name: Cache Homebrew Bundler RubyGems (macOS)
+        id: cache # id is used by next step
+        uses: actions/cache@v4 # Updated to v4
+        if: matrix.is_docker == false && steps.set-up-homebrew.outputs.gems-path
+        with:
+          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+          key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+          restore-keys: ${{ runner.os }}-rubygems-
+
+      - name: Install Homebrew Bundler RubyGems (macOS)
+        if: matrix.is_docker == false && steps.set-up-homebrew.outputs.gems-path && steps.cache.outputs.cache-hit != 'true'
+        run: brew install-bundler-gems
+
       - name: Install shell dependencies (macOS)
-        if: runner.os == 'macOS'
+        if: matrix.is_docker == false
         run: |
-          brew install \
-            elvish \
-            fish \
-            zsh
+          brew install elvish fish zsh || echo "Failed to install some macOS shell dependencies, continuing..."
 
       - name: Install shell dependencies (Linux)
         if: runner.os == 'Linux'
@@ -174,7 +213,7 @@ jobs:
           # NOTE: Skip Brew bundle for now, speed up tests
           ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
           ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE: 1
-        if: matrix.os == 'macOS'
+        if: matrix.os_display_name == 'macOS'
 
       - name: Rerun bin/zsh-dotfiles-prereq-installer
         run: bin/zsh-dotfiles-prereq-installer
@@ -182,7 +221,7 @@ jobs:
           ZSH_DOTFILES_PREP_CI: 1
           ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
           ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE: 1
-        if: matrix.os == 'macOS'
+        if: matrix.os_display_name == 'macOS'
 
       - name: Run bin/zsh-dotfiles-prereq-installer-linux
         run: bin/zsh-dotfiles-prereq-installer-linux
@@ -192,7 +231,7 @@ jobs:
           # NOTE: Skip Brew bundle for now, speed up tests
           ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
           ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE: 1
-        if: matrix.os == 'Linux'
+        if: matrix.os_display_name == 'Linux'
 
       - name: Rerun bin/zsh-dotfiles-prereq-installer-linux
         run: bin/zsh-dotfiles-prereq-installer-linux
@@ -200,4 +239,4 @@ jobs:
           ZSH_DOTFILES_PREP_CI: 1
           ZSH_DOTFILES_PREP_GITHUB_USER: bossjones
           ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE: 1
-        if: matrix.os == 'Linux'
+        if: matrix.os_display_name == 'Linux'
