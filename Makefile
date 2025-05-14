@@ -39,7 +39,7 @@ docker-buildx:
 	docker buildx build \
 		--platform $(PLATFORM) \
 		--file ./$(DOCKERFILE) \
-		--tag zsh-dotfiles-prereq:$(IMAGE_TAG) \
+		--tag $(REGISTRY_IMAGE):$(IMAGE_TAG) \
 		--build-arg DEBIAN_FRONTEND=$(DEBIAN_FRONTEND) \
 		--load \
 		.
@@ -61,6 +61,16 @@ docker-run-test-debug:
 		exit 1; \
 	fi
 	docker run --rm --name test-container $(REGISTRY_IMAGE):$(IMAGE_TAG) bin/zsh-dotfiles-prereq-installer-linux --debug
+	docker logs test-container || true
+	@echo "✅ Test completed"
+
+.PHONY: docker-run-test-bash
+docker-run-test-bash:
+	@if [ -z "$(REGISTRY_IMAGE):$(IMAGE_TAG)" ]; then \
+		echo "Error: IMAGE_TAG is not set. Usage: make docker-run-test IMAGE_TAG=debian-12"; \
+		exit 1; \
+	fi
+	docker run --rm -it --name test-container --entrypoint bash $(REGISTRY_IMAGE):$(IMAGE_TAG)
 	docker logs test-container || true
 	@echo "✅ Test completed"
 

@@ -13,6 +13,31 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     procps \
     locales \
+    bash-completion \
+    curl \
+    g++ \
+    gcc \
+    git \
+    gzip \
+    libbz2-dev \
+    libcairo2-dev \
+    libffi-dev \
+    liblzma-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    libpq-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libyaml-dev \
+    llvm \
+    make \
+    openssl \
+    pkg-config \
+    python3-dev \
+    python3-openssl \
+    sqlite3 \
+    tk-dev tree unzip vim wget xz-utils zlib1g-dev tree \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure locales
@@ -23,23 +48,31 @@ RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
+# The user ID and group ID for the testuser (matches github actions user)
+ENV USER_UID=1001
+ENV USER_GID=121
 
 # Create a non-root user with sudo access
-RUN useradd -m -s /bin/bash testuser && \
+RUN useradd -m -s /bin/bash --uid $USER_UID --gid $USER_GID testuser && \
     usermod -aG sudo testuser && \
-    echo "testuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/testuser && \
+    echo "%testuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/testuser && \
     chmod 0440 /etc/sudoers.d/testuser
 
+# Create writable directories for the user
+RUN mkdir -p /home/testuser/work && \
+    chown -R testuser:testuser /home/testuser && \
+    chmod -R 755 /home/testuser
+
 # Set up working directory for our tests
-WORKDIR /zsh-dotfiles-prep
+WORKDIR /home/testuser/work
 
 # Copy repository files
 COPY --chown=testuser:testuser . .
 
 # Make sure scripts are executable
 RUN chmod +x bin/zsh-dotfiles-prereq-installer-linux && \
-    chown -R testuser:testuser /zsh-dotfiles-prep && \
-    chmod -R u+w /zsh-dotfiles-prep
+    chown -R testuser:testuser /home/testuser/work && \
+    chmod -R 755 /home/testuser/work
 
 # Switch to non-root user (since script refuses to run as root)
 USER testuser
@@ -49,6 +82,10 @@ ENV ZSH_DOTFILES_PREP_CI=1
 ENV ZSH_DOTFILES_PREP_GITHUB_USER=bossjones
 ENV ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE=1
 ENV HOME=/home/testuser
+ENV TMPDIR=/home/testuser/tmp
+
+# Create temp directory with proper permissions
+RUN mkdir -p $TMPDIR && chmod 755 $TMPDIR
 
 # The default command - will be overridden in CI but useful for local testing
 CMD ["bin/zsh-dotfiles-prereq-installer-linux"]
