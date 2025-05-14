@@ -825,31 +825,23 @@ if [ "$CURRENT_OS" = "linux" ]; then
   fi
 
   if [ ! -d "${HOME}/.pyenv" ]; then
-    log "Installing pyenv (Python version manager)..."
-    curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
-    logk
-    export PATH="$HOME/.pyenv/bin:$PATH" # AI: Add pyenv to PATH for current session
-    # AI: Install pyenv-virtualenvwrapper plugin
-    if [ -d "${HOME}/.pyenv/bin" ]; then # Check if pyenv installed correctly
-      log "Installing pyenv-virtualenvwrapper plugin..."
-      git clone https://github.com/pyenv/pyenv-virtualenvwrapper.git "$("${HOME}"/.pyenv/bin/pyenv root)/plugins/pyenv-virtualenvwrapper" || warn "Failed to install pyenv-virtualenvwrapper"
+      log "installing pyenv ..."
+      curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+      logk
+      export PATH="$HOME/.pyenv/bin:$PATH"
+      env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
+      pyenv global 3.10.12
       logk
     fi
-    log "Installing Python 3.10.12 via pyenv..."                                               # AI: Consistent with original script's pyenv version for Linux
-    env PYTHON_CONFIGURE_OPTS="--enable-shared" "$HOME/.pyenv/bin/pyenv" install -s -f 3.10.12 # AI: Added -s for silent, -f for force
-    "$HOME/.pyenv/bin/pyenv" global 3.10.12
     logk
-  else
-    log "pyenv already installed."
-    export PATH="$HOME/.pyenv/bin:$PATH" # AI: Ensure pyenv is on PATH for current session
-  fi
 fi # End of Linux specific package installation
-
+logk
+set -e
 # ---------------------------------------------------------
 # Install cargo, asdf (generic for all supported OS)
 # ---------------------------------------------------------
 # Install Rust/Cargo
-if ! command_exists cargo; then
+if ! (type "cargo" >/dev/null 2>&1); then
   log "Installing Rust and Cargo..."
   curl --proto '=https' --tlsv1.2 https://sh.rustup.rs >rustup.sh
   log "rustup"
@@ -858,12 +850,12 @@ if ! command_exists cargo; then
   logk
   sh rustup.sh -y -q --no-modify-path && rm rustup.sh
   # shellcheck source=/dev/null
+  # shellcheck disable=SC1091  # Not following: ./libexec/asdf.sh was not specified as input (see shellcheck -x).
+  # shellcheck disable=SC2046  # Quote this to prevent word splitting.
   source "$HOME/.cargo/env" # Source for current session
   # Install Rust Apps
   # cargo install -q cargo-update # Example
   logk
-else
-  log "Rust/Cargo already installed."
 fi
 
 logn "Checking/Installing asdf (version manager)..."
@@ -876,12 +868,7 @@ else
   (cd ~/.asdf && git fetch --quiet && git checkout --quiet v0.11.2) # AI: Ensure correct version
   logk
 fi
-# AI: Source asdf for current session to make it available for subsequent commands
-# AI: This will be properly sourced by compat.bash/compat.sh later for new shells
-if [ -f "$HOME/.asdf/asdf.sh" ]; then
-  # shellcheck source=/dev/null
-  . "$HOME/.asdf/asdf.sh"
-fi
+logk
 
 # ---------------------------------------------------------
 # Setup compat files which will be used in .profile .bashrc .zshrc etc
