@@ -87,10 +87,10 @@ repos:
       - id: check-github-workflows
       - id: check-readthedocs
 
-  # - repo: https://github.com/woodruffw/zizmor-pre-commit
-  #   rev: v1.7.0
-  #   hooks:
-  #     - id: zizmor
+  - repo: https://github.com/woodruffw/zizmor-pre-commit
+    rev: v1.7.0
+    hooks:
+      - id: zizmor
 
   # # GitHub Actions linting
   # - repo: https://github.com/rhysd/actionlint
@@ -104,6 +104,19 @@ repos:
   #       files: ^\.github/workflows/
   #       entry: actionlint
   #       minimum_pre_commit_version: 3.0.0
+
+  # GitHub Actions linting
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+    hooks:
+      - id: actionlint
+        name: Lint GitHub Actions workflow files
+        description: Runs actionlint to lint GitHub Actions workflow files
+        language: system
+        types: ["yaml", "yml"]
+        files: ^\.github/workflows/
+        entry: actionlint
+        minimum_pre_commit_version: 3.0.0
 
   # Alternative actionlint options (commented out, choose one if needed)
   # - repo: local

@@ -209,7 +209,13 @@ jobs:
       - name: Verify macOS installation
         run: |
           echo "Verifying macOS setup..."
-          source ~/compat.bash
+          # shellcheck source=/dev/null
+          if [ -f ~/compat.bash ]; then
+            source ~/compat.bash
+          else
+            echo "Warning: ~/compat.bash not found"
+            exit 1
+          fi
 
           which pyenv || true
           which asdf || true
