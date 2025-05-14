@@ -26,6 +26,7 @@ ENV LC_ALL=en_US.UTF-8
 
 # Create a non-root user with sudo access
 RUN useradd -m -s /bin/bash testuser && \
+    usermod -aG sudo testuser && \
     echo "testuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/testuser && \
     chmod 0440 /etc/sudoers.d/testuser
 
