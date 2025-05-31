@@ -7,8 +7,8 @@ rules:
     config:
       severity: warn
 
-# This section configures how Zizmor handles unpinned action references
-# It defines pinning policies for different action patterns
+  # This section configures how Zizmor handles unpinned action references
+  # It defines pinning policies for different action patterns
   unpinned-uses:
     config:
       policies:
@@ -20,7 +20,7 @@ rules:
         # For all other actions (*), require hash-pin (e.g., @hash) for maximum security
         "*": hash-pin
 
-# This section configures which actions are completely forbidden from being used
+  # This section configures which actions are completely forbidden from being used
   forbidden-uses:
     config:
       deny:
@@ -32,5 +32,5 @@ rules:
     ignore:
       # Ignore template injection warnings for the manifest creation and inspection steps
       # These are safe as the registry variables are controlled by the workflow
-      - tests-e2e.yml  # Create merged manifest step
+      - tests-e2e.yml # Create merged manifest step
       # - ".github/workflows/tests-e2e.yml:350:352"  # Inspect merged image step

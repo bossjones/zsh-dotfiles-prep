@@ -130,3 +130,7 @@ debian-fix-broken:
 	sudo apt clean
 	sudo apt --fix-broken install
 	sudo dpkg --configure -a
+
+.PHONY: fix
+fix:
+	uv run pre-commit run -a --show-diff-on-failure
