@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a prerequisite installation tool that prepares machines to run the [bossjones/zsh-dotfiles](https://github.com/bossjones/zsh-dotfiles) chezmoi configuration. It bootstraps development environments with essential tools before applying dotfiles.
 
+**Development Environment**: Developed on macOS but designed to run on Debian, Ubuntu, and CentOS/RHEL systems. The installer handles platform-specific package management and toolchain installation across these environments.
+
 ## Quick Start
 
 ```bash
@@ -79,12 +81,18 @@ docker run --rm -it debian:12 bash
 ### Core Installation Scripts (`/bin/`)
 - `install.sh` - POSIX-compliant meta-installer that detects platform, installs dependencies, and runs appropriate platform installer
 - `zsh-dotfiles-prereq-installer` - macOS installer with Homebrew, Xcode tools, TouchID sudo
-- `zsh-dotfiles-prereq-installer-linux` - Cross-platform installer for Debian/Ubuntu
+- `zsh-dotfiles-prereq-installer-linux` - Cross-platform installer for Debian/Ubuntu/CentOS
 
 The platform installers are idempotent and install development toolchain (Rust, Python via pyenv, Node via fnm, asdf, chezmoi) plus create compatibility files (`~/compat.bash`, `~/compat.sh`) for environment setup.
 
+### Platform Support
+- **macOS**: Full support via Homebrew
+- **Debian/Ubuntu**: Native package management with apt
+- **CentOS/RHEL**: Native package management with dnf, EPEL repository support
+- **Path Resolution**: Scripts work from any directory via absolute path detection
+
 ### Multi-Platform Testing
-Docker-based testing infrastructure with `Dockerfile-debian-12` and `Dockerfile-ubuntu-2204` supporting linux/amd64 and linux/arm64 architectures. Images published to GitHub Container Registry.
+Docker-based testing infrastructure with `Dockerfile-debian-12`, `Dockerfile-ubuntu-2204`, and `Dockerfile-centos-9` supporting linux/amd64 and linux/arm64 architectures. Images published to GitHub Container Registry for comprehensive cross-platform validation.
 
 ### Tool Management
 - `Brewfile` contains 500+ development tools including languages, utilities, fonts, and VSCode extensions
@@ -98,11 +106,13 @@ Docker-based testing infrastructure with `Dockerfile-debian-12` and `Dockerfile-
 
 ## Development Workflow
 
+**Note**: Development happens on macOS, but the target deployment environments are Linux systems.
+
 1. Make changes to installer scripts in `/bin/`
 2. Run `make style` to check formatting and linting
-3. Test locally with `--debug` flag
-4. Run `make docker-buildx` to test across platforms
-5. Use `make docker-full-pipeline` for comprehensive testing before commits
+3. Test locally with `--debug` flag (macOS development environment)
+4. Run `make docker-buildx` to test across Linux platforms (Debian, Ubuntu, CentOS)
+5. Use `make docker-full-pipeline` for comprehensive cross-platform testing before commits
 
 ## Environment Variables
 
@@ -126,3 +136,16 @@ Docker-based testing infrastructure with `Dockerfile-debian-12` and `Dockerfile-
 The installer creates compatibility files that must work across different shell environments. Test with both bash and zsh. The `--debug` flag provides verbose output for troubleshooting installation issues.
 
 Use `make install-hooks` to set up the Python development environment with uv and pre-commit hooks before making changes.
+
+## Platform-Specific Notes
+
+### CentOS/RHEL Support
+Recent fixes for CentOS 9 compatibility:
+- Removed unavailable packages: `yaml-devel` (no separate devel package), `elvish` (not in standard repos), `man-pages-devel` (use `man-pages`)
+- Uses EPEL repository for additional packages
+- Fixed path resolution to work from any directory
+- Supports Oracle Linux and other RHEL derivatives
+
+### Package Differences
+- **Debian/Ubuntu**: Uses `libyaml-dev`, includes `elvish` shell
+- **CentOS/RHEL**: Uses base `libyaml` package, excludes `elvish` shell

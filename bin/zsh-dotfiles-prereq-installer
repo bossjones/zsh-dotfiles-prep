@@ -1102,6 +1102,7 @@ fi
 logn 'fnm setup..'
 eval "$(fnm env --use-on-cd)"
 fnm install v22.13.1 || true
+fnm install v22.14.0 || true
 logk
 
 # ---------------------------------------------------------

@@ -63,6 +63,9 @@ jobs:
           - container_name: Ubuntu 22.04
             dockerfile: Dockerfile-ubuntu-2204
             image_tag: ubuntu-2204
+          - container_name: CentOS 9
+            dockerfile: Dockerfile-centos-9
+            image_tag: centos-9
     steps:
       - name: Set up Git repository
         uses: actions/checkout@v4
@@ -212,6 +215,10 @@ jobs:
             dockerfile: Dockerfile-ubuntu-2204
             platform: linux/amd64,linux/arm64
             tag: ubuntu-2204
+          - name: CentOS 9
+            dockerfile: Dockerfile-centos-9
+            platform: linux/amd64,linux/arm64
+            tag: centos-9
     env:
       REGISTRY: ghcr.io
       REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-prep
@@ -307,7 +314,8 @@ jobs:
           docker buildx imagetools create \
             -t ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:latest \
             ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:debian-12 \
-            ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:ubuntu-2204
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:ubuntu-2204 \
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:centos-9
 
       - name: Inspect merged image
         run: |

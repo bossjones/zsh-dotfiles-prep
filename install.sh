@@ -45,7 +45,7 @@ detect_platform() {
                     debian|ubuntu)
                         LINUX_DISTRO="$ID"
                         ;;
-                    centos|rhel|rocky|almalinux)
+                    centos|rhel|rocky|almalinux|ol)
                         LINUX_DISTRO="centos"
                         ;;
                     *)
@@ -236,6 +236,7 @@ install_debian_deps() {
         sudo rm -rf /usr/local/go
         sudo tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz
         rm go1.20.5.linux-amd64.tar.gz
+        cd -
 
         # Add Go to PATH
         if ! echo "$PATH" | grep -q "/usr/local/go/bin"; then
@@ -248,6 +249,8 @@ install_debian_deps() {
 # Install CentOS/RHEL dependencies
 install_centos_deps() {
     log_info "Installing CentOS/RHEL dependencies"
+
+    sudo dnf config-manager --set-enabled ol9_codeready_builder
 
     # Update package lists
     log_info "Updating package lists"
@@ -271,16 +274,18 @@ install_centos_deps() {
     log_info "Installing build tools and development libraries"
     sudo dnf groupinstall -y "Development Tools"
     build_packages="gcc gcc-c++ make pkgconfig llvm"
-    dev_libraries="bzip2-devel cairo-devel libffi-devel xz-devel ncurses-devel libpq-devel readline-devel sqlite-devel openssl-devel libyaml-devel python3-devel zlib-devel tk-devel"
+    dev_libraries="bzip2-devel cairo-devel libffi-devel xz-devel ncurses-devel libpq-devel readline-devel sqlite-devel openssl-devel python3-devel zlib-devel tk-devel libevent-devel"
 
     sudo dnf install -y $build_packages $dev_libraries
 
     # Install shells and utilities
     log_info "Installing shells and utilities"
-    shell_packages="zsh fish elvish"
-    utility_packages="tree unzip vim xz sqlite openssl procps-ng man-pages man-pages-devel bash-completion gzip"
+    shell_packages="zsh fish"
+    utility_packages="tree unzip vim xz sqlite openssl procps-ng man-pages bash-completion gzip"
 
     sudo dnf install -y $shell_packages $utility_packages
+
+    sudo dnf install --enablerepo=ol9_codeready_builder libyaml-devel libevent-devel openssl-devel readline-devel ncurses-devel zlib-devel bzip2-devel libffi-devel -y
 
     # Install Python 3.12 if not available from system packages
     if ! command -v python3.12 >/dev/null 2>&1; then
@@ -296,6 +301,7 @@ install_centos_deps() {
         sudo rm -rf /usr/local/go
         sudo tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz
         rm go1.20.5.linux-amd64.tar.gz
+        cd -
 
         # Add Go to PATH
         if ! echo "$PATH" | grep -q "/usr/local/go/bin"; then
@@ -325,17 +331,21 @@ install_linux_deps() {
 run_platform_installer() {
     log_info "Running platform-specific installer"
 
+    # Get the directory where this script is located
+    script_dir="$(cd "$(dirname "$0")" && pwd)"
+
     case "$PLATFORM" in
         macos)
-            installer_script="./bin/zsh-dotfiles-prereq-installer"
+            installer_script="$script_dir/bin/zsh-dotfiles-prereq-installer"
             ;;
         linux)
-            installer_script="./bin/zsh-dotfiles-prereq-installer-linux"
+            installer_script="$script_dir/bin/zsh-dotfiles-prereq-installer-linux"
             ;;
     esac
 
     if [ ! -f "$installer_script" ]; then
         log_error "Platform installer not found: $installer_script"
+        log_error "Script directory: $script_dir"
         log_error "Make sure you're running this script from the repository root"
         exit 1
     fi
