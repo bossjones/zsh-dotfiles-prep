@@ -1,6 +1,6 @@
 #!/bin/sh
 # install.sh - POSIX-compliant installer for zsh-dotfiles-prep dependencies
-# Works on both macOS and Linux (Debian/Ubuntu)
+# Works on macOS and Linux (Debian/Ubuntu/CentOS/RHEL)
 
 set -e
 
@@ -45,9 +45,12 @@ detect_platform() {
                     debian|ubuntu)
                         LINUX_DISTRO="$ID"
                         ;;
+                    centos|rhel|rocky|almalinux)
+                        LINUX_DISTRO="centos"
+                        ;;
                     *)
                         log_error "Unsupported Linux distribution: $ID"
-                        log_error "This script only supports Debian and Ubuntu"
+                        log_error "This script only supports Debian, Ubuntu, and CentOS/RHEL-based distributions"
                         exit 1
                         ;;
                 esac
@@ -182,9 +185,9 @@ install_macos_deps() {
     fi
 }
 
-# Install Linux dependencies
-install_linux_deps() {
-    log_info "Installing Linux dependencies"
+# Install Debian/Ubuntu dependencies
+install_debian_deps() {
+    log_info "Installing Debian/Ubuntu dependencies"
 
     # Update package lists
     log_info "Updating package lists"
@@ -240,6 +243,82 @@ install_linux_deps() {
             export PATH=$PATH:/usr/local/go/bin
         fi
     fi
+}
+
+# Install CentOS/RHEL dependencies
+install_centos_deps() {
+    log_info "Installing CentOS/RHEL dependencies"
+
+    # Update package lists
+    log_info "Updating package lists"
+    sudo dnf update -y
+
+    # Install EPEL repository for additional packages
+    log_info "Installing EPEL repository"
+    sudo dnf install -y epel-release
+
+    # Configure locales
+    log_info "Configuring locales"
+    sudo dnf install -y glibc-locale-source glibc-langpack-en
+    sudo localedef -c -i en_US -f UTF-8 en_US.UTF-8
+
+    # Install essential system packages
+    log_info "Installing essential system packages"
+    essential_packages="sudo curl wget git ca-certificates gnupg"
+    sudo dnf install -y $essential_packages
+
+    # Install build tools and development libraries
+    log_info "Installing build tools and development libraries"
+    sudo dnf groupinstall -y "Development Tools"
+    build_packages="gcc gcc-c++ make pkgconfig llvm"
+    dev_libraries="bzip2-devel cairo-devel libffi-devel xz-devel ncurses-devel libpq-devel readline-devel sqlite-devel openssl-devel libyaml-devel python3-devel zlib-devel tk-devel"
+
+    sudo dnf install -y $build_packages $dev_libraries
+
+    # Install shells and utilities
+    log_info "Installing shells and utilities"
+    shell_packages="zsh fish elvish"
+    utility_packages="tree unzip vim xz sqlite openssl procps-ng man-pages man-pages-devel bash-completion gzip"
+
+    sudo dnf install -y $shell_packages $utility_packages
+
+    # Install Python 3.12 if not available from system packages
+    if ! command -v python3.12 >/dev/null 2>&1; then
+        log_info "Installing Python 3.12"
+        sudo dnf install -y python3.12 python3.12-devel python3.12-pip
+    fi
+
+    # Install Go 1.20.5 if not available
+    if ! command -v go >/dev/null 2>&1 || [ "$(go version | cut -d' ' -f3)" != "go1.20.5" ]; then
+        log_info "Installing Go 1.20.5"
+        cd /tmp
+        wget -q https://go.dev/dl/go1.20.5.linux-amd64.tar.gz
+        sudo rm -rf /usr/local/go
+        sudo tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz
+        rm go1.20.5.linux-amd64.tar.gz
+
+        # Add Go to PATH
+        if ! echo "$PATH" | grep -q "/usr/local/go/bin"; then
+            echo 'export PATH=$PATH:/usr/local/go/bin' >> "$HOME/.bashrc"
+            export PATH=$PATH:/usr/local/go/bin
+        fi
+    fi
+}
+
+# Install Linux dependencies (wrapper function)
+install_linux_deps() {
+    case "$LINUX_DISTRO" in
+        debian|ubuntu)
+            install_debian_deps
+            ;;
+        centos)
+            install_centos_deps
+            ;;
+        *)
+            log_error "Unsupported Linux distribution: $LINUX_DISTRO"
+            exit 1
+            ;;
+    esac
 }
 
 # Run the appropriate platform installer

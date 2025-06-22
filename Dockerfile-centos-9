@@ -1,0 +1,95 @@
+FROM quay.io/centos/centos:stream9
+
+# Install base prerequisites and EPEL
+RUN dnf update -y && dnf install -y --allowerasing \
+    sudo \
+    curl \
+    wget \
+    git \
+    ca-certificates \
+    gnupg \
+    epel-release \
+    procps-ng \
+    glibc-locale-source \
+    glibc-langpack-en \
+    bash-completion \
+    && dnf clean all
+
+# Install development tools and libraries (after EPEL is available)
+RUN dnf install -y \
+    gcc \
+    gcc-c++ \
+    make \
+    pkgconfig \
+    llvm \
+    gzip \
+    bzip2-devel \
+    cairo-devel \
+    libffi-devel \
+    xz-devel \
+    ncurses-devel \
+    libpq-devel \
+    readline-devel \
+    sqlite-devel \
+    openssl-devel \
+    python3-devel \
+    sqlite \
+    tk-devel \
+    tree \
+    unzip \
+    vim \
+    xz \
+    zlib-devel \
+    openssl \
+    man-pages \
+    && dnf groupinstall -y "Development Tools" \
+    && dnf clean all
+
+# Configure locales
+RUN localedef -c -i en_US -f UTF-8 en_US.UTF-8
+
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+# The user ID and group ID for the testuser (matches github actions user)
+ENV USER_UID=1001
+ENV USER_GID=121
+
+
+RUN groupadd -g $USER_GID testuser && \
+    useradd -m -s /bin/bash -u $USER_UID  -g testuser testuser && \
+    usermod -aG wheel testuser && \
+    echo "testuser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/testuser && \
+    echo "%testuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/testuser && \
+    chmod 0440 /etc/sudoers.d/testuser && \
+    mkdir -p /home/testuser/work && \
+    chown -R testuser:testuser /home/testuser && \
+    chmod -R 755 /home/testuser && \
+    echo "testuser:password" | chpasswd
+
+# Set up working directory for our tests
+WORKDIR /home/testuser/work
+
+# Copy repository files
+COPY --chown=testuser:testuser . .
+
+# Make sure scripts are executable
+RUN chmod +x bin/zsh-dotfiles-prereq-installer-linux && \
+    chown -R testuser:testuser /home/testuser/work && \
+    chmod -R 755 /home/testuser/work
+
+# Switch to non-root user (since script refuses to run as root)
+USER testuser
+
+# Set environment variables for the script
+ENV ZSH_DOTFILES_PREP_CI=1
+ENV ZSH_DOTFILES_PREP_GITHUB_USER=bossjones
+ENV ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE=1
+ENV HOME=/home/testuser
+ENV TMPDIR=/home/testuser/tmp
+
+# Create temp directory with proper permissions
+RUN mkdir -p $TMPDIR && chmod 755 $TMPDIR
+
+# The default command - will be overridden in CI but useful for local testing
+CMD ["bin/zsh-dotfiles-prereq-installer-linux"]
