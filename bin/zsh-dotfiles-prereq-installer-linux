@@ -1787,6 +1787,15 @@ fnm install v22.13.1 || true
 # Log completion.
 logk
 
+# Install sheldon (shell plugin manager)
+if [ ! -f ~/.local/bin/sheldon ]; then
+  log "Installing sheldon (shell plugin manager)..."
+  curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin --tag 0.6.6
+  logk
+else
+  log "sheldon already installed."
+fi
+
 # Separator comment indicating start of Chezmoi installation.
 # ---------------------------------------------------------
 # Chezmoi

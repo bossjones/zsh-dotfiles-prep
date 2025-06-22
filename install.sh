@@ -250,6 +250,8 @@ install_debian_deps() {
 install_centos_deps() {
     log_info "Installing CentOS/RHEL dependencies"
 
+    sudo dnf config-manager --set-enabled ol9_codeready_builder
+
     # Update package lists
     log_info "Updating package lists"
     sudo dnf update -y
@@ -272,7 +274,7 @@ install_centos_deps() {
     log_info "Installing build tools and development libraries"
     sudo dnf groupinstall -y "Development Tools"
     build_packages="gcc gcc-c++ make pkgconfig llvm"
-    dev_libraries="bzip2-devel cairo-devel libffi-devel xz-devel ncurses-devel libpq-devel readline-devel sqlite-devel openssl-devel python3-devel zlib-devel tk-devel"
+    dev_libraries="bzip2-devel cairo-devel libffi-devel xz-devel ncurses-devel libpq-devel readline-devel sqlite-devel openssl-devel python3-devel zlib-devel tk-devel libevent-devel"
 
     sudo dnf install -y $build_packages $dev_libraries
 
@@ -282,6 +284,8 @@ install_centos_deps() {
     utility_packages="tree unzip vim xz sqlite openssl procps-ng man-pages bash-completion gzip"
 
     sudo dnf install -y $shell_packages $utility_packages
+
+    sudo dnf install --enablerepo=ol9_codeready_builder libyaml-devel libevent-devel openssl-devel readline-devel ncurses-devel zlib-devel bzip2-devel libffi-devel -y
 
     # Install Python 3.12 if not available from system packages
     if ! command -v python3.12 >/dev/null 2>&1; then
