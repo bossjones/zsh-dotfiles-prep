@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a prerequisite installation tool that prepares machines to run the [bossjones/zsh-dotfiles](https://github.com/bossjones/zsh-dotfiles) chezmoi configuration. It bootstraps development environments with essential tools before applying dotfiles.
 
+**Development Environment**: Developed on macOS but designed to run on Debian, Ubuntu, and CentOS/RHEL systems. The installer handles platform-specific package management and toolchain installation across these environments.
+
 ## Quick Start
 
 ```bash
@@ -90,7 +92,7 @@ The platform installers are idempotent and install development toolchain (Rust, 
 - **Path Resolution**: Scripts work from any directory via absolute path detection
 
 ### Multi-Platform Testing
-Docker-based testing infrastructure with `Dockerfile-debian-12` and `Dockerfile-ubuntu-2204` supporting linux/amd64 and linux/arm64 architectures. Images published to GitHub Container Registry.
+Docker-based testing infrastructure with `Dockerfile-debian-12`, `Dockerfile-ubuntu-2204`, and `Dockerfile-centos-9` supporting linux/amd64 and linux/arm64 architectures. Images published to GitHub Container Registry for comprehensive cross-platform validation.
 
 ### Tool Management
 - `Brewfile` contains 500+ development tools including languages, utilities, fonts, and VSCode extensions
@@ -104,11 +106,13 @@ Docker-based testing infrastructure with `Dockerfile-debian-12` and `Dockerfile-
 
 ## Development Workflow
 
+**Note**: Development happens on macOS, but the target deployment environments are Linux systems.
+
 1. Make changes to installer scripts in `/bin/`
 2. Run `make style` to check formatting and linting
-3. Test locally with `--debug` flag
-4. Run `make docker-buildx` to test across platforms
-5. Use `make docker-full-pipeline` for comprehensive testing before commits
+3. Test locally with `--debug` flag (macOS development environment)
+4. Run `make docker-buildx` to test across Linux platforms (Debian, Ubuntu, CentOS)
+5. Use `make docker-full-pipeline` for comprehensive cross-platform testing before commits
 
 ## Environment Variables
 

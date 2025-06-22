@@ -1175,11 +1175,11 @@ if [ "$CURRENT_OS" = "linux" ]; then
       xz-devel \
       tk-devel \
       libxml2-devel \
-      libxmlsec1-devel \
+      xmlsec1-devel \
       libffi-devel \
       unzip \
       ca-certificates \
-      gnupg \
+      gnupg2 \
       bash \
       findutils \
       gawk \
@@ -1190,8 +1190,8 @@ if [ "$CURRENT_OS" = "linux" ]; then
       tree \
       rsync \
       screen \
-      vim \
-      watch \
+      vim-enhanced \
+      procps-ng \
       wget \
       zsh \
       fish \
