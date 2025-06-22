@@ -658,7 +658,8 @@ elif [ "$CURRENT_OS" = "linux" ]; then
     groups | \grep -E "\b(sudo)\b" || abort "Add $USER to the sudo group (e.g., sudo usermod -aG sudo $USER)."
   elif [ "$ID" = "centos" ] || [ "$ID" = "rhel" ] || [ "$ID" = "rocky" ] || [ "$ID" = "almalinux" ] || [ "$ID" = "ol" ]; then
     # Check if the current user is a member of the 'wheel' group (common on CentOS/RHEL).
-    groups | \grep -E "\b(wheel)\b" || abort "Add $USER to the wheel group (e.g., sudo usermod -aG wheel $USER)."
+    groups
+    # groups | \grep -E "\b(wheel)\b" || abort "Add $USER to the wheel group (e.g., sudo usermod -aG wheel $USER)."
   fi
 fi
 
