@@ -293,11 +293,17 @@ install_centos_deps() {
     . /etc/os-release
     if [ "$ID" = "ol" ]; then
       log_info "Detected Oracle Linux - enabling required repositories"
-      sudo dnf config-manager --set-enabled crb
-      sudo dnf config-manager --set-enabled ol9_codeready_builder
-      sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
-    else
-      sudo dnf config-manager --set-enabled ol9_codeready_builder
+
+      # Try to enable CodeReady Builder repository for Oracle Linux 9+
+      if sudo dnf config-manager --set-enabled ol9_codeready_builder 2>/dev/null; then
+        log_info "Enabled ol9_codeready_builder repository"
+      else
+        log_warn "Could not enable CodeReady Builder repository - continuing without it"
+      fi
+
+      # Install EPEL for Oracle Linux
+      sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm || \
+      log_warn "Could not install EPEL repository"
     fi
   fi
 
