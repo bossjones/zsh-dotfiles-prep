@@ -6,7 +6,8 @@
       "Bash(sh:*)",
       "Bash(grep:*)",
       "Bash(docker build:*)",
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(./install.sh:*)"
     ],
     "deny": []
   }

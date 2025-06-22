@@ -45,7 +45,7 @@ detect_platform() {
                     debian|ubuntu)
                         LINUX_DISTRO="$ID"
                         ;;
-                    centos|rhel|rocky|almalinux)
+                    centos|rhel|rocky|almalinux|ol)
                         LINUX_DISTRO="centos"
                         ;;
                     *)
