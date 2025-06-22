@@ -277,8 +277,8 @@ install_centos_deps() {
 
     # Install shells and utilities
     log_info "Installing shells and utilities"
-    shell_packages="zsh fish elvish"
-    utility_packages="tree unzip vim xz sqlite openssl procps-ng man-pages man-pages-devel bash-completion gzip"
+    shell_packages="zsh fish"
+    utility_packages="tree unzip vim xz sqlite openssl procps-ng man-pages bash-completion gzip"
 
     sudo dnf install -y $shell_packages $utility_packages
 
