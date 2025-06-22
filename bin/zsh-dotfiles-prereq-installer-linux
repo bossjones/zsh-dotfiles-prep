@@ -1292,7 +1292,13 @@ if [ "$CURRENT_OS" = "linux" ]; then
     # Add pyenv bin directory to PATH for the current session.
     export PATH="$HOME/.pyenv/bin:$PATH"
     # Set Python configure options for shared library support and install Python 3.10.12 using pyenv.
-    env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
+    # On CentOS/RHEL systems, /tmp may be mounted with noexec, so use an alternative temp directory
+    if [ "$ID" = "centos" ] || [ "$ID" = "rhel" ] || [ "$ID" = "rocky" ] || [ "$ID" = "almalinux" ] || [ "$ID" = "ol" ]; then
+      mkdir -p "$HOME/.local/tmp"
+      env TMPDIR="$HOME/.local/tmp" PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
+    else
+      env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -f 3.10.12
+    fi
     # Set Python 3.10.12 as the global default version.
     pyenv global 3.10.12
     # Log successful Python installation via pyenv.
