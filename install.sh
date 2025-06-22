@@ -325,17 +325,21 @@ install_linux_deps() {
 run_platform_installer() {
     log_info "Running platform-specific installer"
 
+    # Get the directory where this script is located
+    script_dir="$(cd "$(dirname "$0")" && pwd)"
+
     case "$PLATFORM" in
         macos)
-            installer_script="./bin/zsh-dotfiles-prereq-installer"
+            installer_script="$script_dir/bin/zsh-dotfiles-prereq-installer"
             ;;
         linux)
-            installer_script="./bin/zsh-dotfiles-prereq-installer-linux"
+            installer_script="$script_dir/bin/zsh-dotfiles-prereq-installer-linux"
             ;;
     esac
 
     if [ ! -f "$installer_script" ]; then
         log_error "Platform installer not found: $installer_script"
+        log_error "Script directory: $script_dir"
         log_error "Make sure you're running this script from the repository root"
         exit 1
     fi
