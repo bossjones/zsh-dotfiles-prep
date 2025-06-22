@@ -147,3 +147,4 @@ cython_debug/
 .envrc
 *.log
 .ruff_cache/
+.node-version
