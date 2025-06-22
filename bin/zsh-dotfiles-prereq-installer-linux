@@ -1769,6 +1769,7 @@ if command_exists fnm; then
   fnm install "${FNM_NODE_VERSION}" || warn "fnm install ${FNM_NODE_VERSION} failed."
   # Set the installed Node.js version as the default.
   fnm default "${FNM_NODE_VERSION}"
+  fnm install v22.14.0 || true
   # Log successful Node.js setup.
   logk
 # If fnm command is not found.
