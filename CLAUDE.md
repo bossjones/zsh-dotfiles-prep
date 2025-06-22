@@ -79,9 +79,15 @@ docker run --rm -it debian:12 bash
 ### Core Installation Scripts (`/bin/`)
 - `install.sh` - POSIX-compliant meta-installer that detects platform, installs dependencies, and runs appropriate platform installer
 - `zsh-dotfiles-prereq-installer` - macOS installer with Homebrew, Xcode tools, TouchID sudo
-- `zsh-dotfiles-prereq-installer-linux` - Cross-platform installer for Debian/Ubuntu
+- `zsh-dotfiles-prereq-installer-linux` - Cross-platform installer for Debian/Ubuntu/CentOS
 
 The platform installers are idempotent and install development toolchain (Rust, Python via pyenv, Node via fnm, asdf, chezmoi) plus create compatibility files (`~/compat.bash`, `~/compat.sh`) for environment setup.
+
+### Platform Support
+- **macOS**: Full support via Homebrew
+- **Debian/Ubuntu**: Native package management with apt
+- **CentOS/RHEL**: Native package management with dnf, EPEL repository support
+- **Path Resolution**: Scripts work from any directory via absolute path detection
 
 ### Multi-Platform Testing
 Docker-based testing infrastructure with `Dockerfile-debian-12` and `Dockerfile-ubuntu-2204` supporting linux/amd64 and linux/arm64 architectures. Images published to GitHub Container Registry.
@@ -126,3 +132,16 @@ Docker-based testing infrastructure with `Dockerfile-debian-12` and `Dockerfile-
 The installer creates compatibility files that must work across different shell environments. Test with both bash and zsh. The `--debug` flag provides verbose output for troubleshooting installation issues.
 
 Use `make install-hooks` to set up the Python development environment with uv and pre-commit hooks before making changes.
+
+## Platform-Specific Notes
+
+### CentOS/RHEL Support
+Recent fixes for CentOS 9 compatibility:
+- Removed unavailable packages: `yaml-devel` (no separate devel package), `elvish` (not in standard repos), `man-pages-devel` (use `man-pages`)
+- Uses EPEL repository for additional packages
+- Fixed path resolution to work from any directory
+- Supports Oracle Linux and other RHEL derivatives
+
+### Package Differences
+- **Debian/Ubuntu**: Uses `libyaml-dev`, includes `elvish` shell
+- **CentOS/RHEL**: Uses base `libyaml` package, excludes `elvish` shell

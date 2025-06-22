@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #/ Usage: bin/zsh-dotfiles-prereq-installer [--debug]
-#/ Install development dependencies on macOS, Debian 12, and Ubuntu 22.04.
+#/ Install development dependencies on macOS, Debian 12, Ubuntu 22.04, and CentOS 9/RHEL derivatives.
 # SOURCE: https://github.com/search?q=repo%3AMikeMcQuaid%2Fstrap%20Xcode&type=code
 
 # TODO: Add sudoless ? https://github.com/atomantic/dotfiles/blob/main/install.sh#L16C1-L36C3
@@ -428,17 +428,17 @@ get_os() {
     echo "macos"
   # Check if the OS is Linux.
   elif [ "$os" = Linux ]; then
-    # Further check for Debian/Ubuntu.
+    # Further check for Debian/Ubuntu/CentOS.
     # Check if the /etc/os-release file exists.
     if [ -f /etc/os-release ]; then
       # Source the /etc/os-release file to get OS identification variables (disable shellcheck for dynamic source).
       # shellcheck source=/dev/null
       source /etc/os-release
-      # Check if the ID is "debian" or "ubuntu".
-      if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]; then
+      # Check if the ID is "debian", "ubuntu", or CentOS/RHEL derivatives.
+      if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ] || [ "$ID" = "centos" ] || [ "$ID" = "rhel" ] || [ "$ID" = "rocky" ] || [ "$ID" = "almalinux" ] || [ "$ID" = "ol" ]; then
         # Output "linux" for supported Linux distributions.
         echo "linux" # Supported Linux
-      # If the ID is not Debian or Ubuntu.
+      # If the ID is not a supported distribution.
       else
         # Print an error message for unsupported Linux distribution.
         error "Unsupported Linux distribution: $ID"
@@ -649,8 +649,17 @@ if [ "$CURRENT_OS" = "macos" ]; then
   fi
 # Check if the current OS is Linux.
 elif [ "$CURRENT_OS" = "linux" ]; then
-  # Check if the current user is a member of the 'sudo' group (common on Debian/Ubuntu).
-  groups | \grep -E "\b(sudo)\b" || abort "Add $USER to the sudo group (e.g., sudo usermod -aG sudo $USER)."
+  # Source /etc/os-release to get OS identification variables
+  # shellcheck source=/dev/null
+  source /etc/os-release
+  # Check if the current user is a member of appropriate sudo groups for their distribution
+  if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]; then
+    # Check if the current user is a member of the 'sudo' group (common on Debian/Ubuntu).
+    groups | \grep -E "\b(sudo)\b" || abort "Add $USER to the sudo group (e.g., sudo usermod -aG sudo $USER)."
+  elif [ "$ID" = "centos" ] || [ "$ID" = "rhel" ] || [ "$ID" = "rocky" ] || [ "$ID" = "almalinux" ] || [ "$ID" = "ol" ]; then
+    # Check if the current user is a member of the 'wheel' group (common on CentOS/RHEL).
+    groups | \grep -E "\b(wheel)\b" || abort "Add $USER to the wheel group (e.g., sudo usermod -aG wheel $USER)."
+  fi
 fi
 
 # Set some basic security settings (macOS specific in original script).
@@ -1067,71 +1076,132 @@ if [ "$CURRENT_OS" = "linux" ]; then
 
   # Log updating package list and installing prerequisites for the detected Linux distribution.
   log "Updating package list and installing prerequisites for $NAME..."
-  # Update the package list using apt-get with sudo, non-interactively.
-  sudo_askpass apt-get update -y
-  # AI: Consolidated and expanded apt package list
-  # Install a list of prerequisite packages using apt-get with sudo, non-interactively.
-  sudo_askpass apt-get install -y \
-    build-essential \
-    libssl-dev \
-    zlib1g-dev \
-    cmake \
-    libbz2-dev \
-    libreadline-dev \
-    libsqlite3-dev \
-    curl \
-    libncursesw5-dev \
-    xz-utils \
-    tk-dev \
-    libxml2-dev \
-    libxmlsec1-dev \
-    libffi-dev \
-    liblzma-dev \
-    unzip \
-    apt-transport-https \
-    ca-certificates \
-    gnupg \
-    lsb-release \
-    pkg-config \
-    autogen \
-    bash \
-    direnv \
-    fd-find \
-    gnutls-bin \
-    libgnutls28-dev \
-    findutils \
-    fzf \
-    gawk \
-    gcc \
-    gh \
-    git \
-    indent \
-    hub \
-    jq \
-    less \
-    lsof \
-    luarocks \
-    moreutils \
-    neofetch \
-    neovim \
-    nnn \
-    nodejs \
-    npm \
-    tree \
-    ripgrep \
-    rsync \
-    screen \
-    screenfetch \
-    shellcheck \
-    shfmt \
-    urlview \
-    vim \
-    watch \
-    wget \
-    zsh \
-    ruby-build \
-    rbenv \
-    golang-go
+
+  # Check if this is a Debian/Ubuntu system
+  if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]; then
+    # Update the package list using apt-get with sudo, non-interactively.
+    sudo_askpass apt-get update -y
+    # AI: Consolidated and expanded apt package list
+    # Install a list of prerequisite packages using apt-get with sudo, non-interactively.
+    sudo_askpass apt-get install -y \
+      build-essential \
+      libssl-dev \
+      zlib1g-dev \
+      cmake \
+      libbz2-dev \
+      libreadline-dev \
+      libsqlite3-dev \
+      curl \
+      libncursesw5-dev \
+      xz-utils \
+      tk-dev \
+      libxml2-dev \
+      libxmlsec1-dev \
+      libffi-dev \
+      liblzma-dev \
+      unzip \
+      apt-transport-https \
+      ca-certificates \
+      gnupg \
+      lsb-release \
+      pkg-config \
+      autogen \
+      bash \
+      direnv \
+      fd-find \
+      gnutls-bin \
+      libgnutls28-dev \
+      findutils \
+      fzf \
+      gawk \
+      gcc \
+      gh \
+      git \
+      indent \
+      hub \
+      jq \
+      less \
+      lsof \
+      luarocks \
+      moreutils \
+      neofetch \
+      neovim \
+      nnn \
+      nodejs \
+      npm \
+      tree \
+      ripgrep \
+      rsync \
+      screen \
+      screenfetch \
+      shellcheck \
+      shfmt \
+      urlview \
+      vim \
+      watch \
+      wget \
+      zsh \
+      ruby-build \
+      rbenv \
+      golang-go
+  # Check if this is a CentOS/RHEL system
+  elif [ "$ID" = "centos" ] || [ "$ID" = "rhel" ] || [ "$ID" = "rocky" ] || [ "$ID" = "almalinux" ] || [ "$ID" = "ol" ]; then
+    # Update package lists
+    sudo_askpass dnf update -y
+
+    # Install EPEL repository for additional packages
+    log "Installing EPEL repository..."
+    sudo_askpass dnf install -y epel-release
+
+    # Install build tools and development libraries
+    log "Installing Development Tools group..."
+    sudo_askpass dnf groupinstall -y "Development Tools"
+
+    # Install prerequisite packages for CentOS/RHEL
+    sudo_askpass dnf install -y \
+      gcc \
+      gcc-c++ \
+      make \
+      cmake \
+      pkgconfig \
+      openssl-devel \
+      zlib-devel \
+      bzip2-devel \
+      readline-devel \
+      sqlite-devel \
+      curl \
+      ncurses-devel \
+      xz-devel \
+      tk-devel \
+      libxml2-devel \
+      libxmlsec1-devel \
+      libffi-devel \
+      unzip \
+      ca-certificates \
+      gnupg \
+      bash \
+      findutils \
+      gawk \
+      git \
+      jq \
+      less \
+      lsof \
+      tree \
+      rsync \
+      screen \
+      vim \
+      watch \
+      wget \
+      zsh \
+      fish \
+      golang \
+      ruby \
+      nodejs \
+      npm
+  else
+    error "Unsupported Linux distribution for package installation: $ID"
+    exit 1
+  fi
   # Log successful package installation.
   logk
 
@@ -1168,32 +1238,34 @@ if [ "$CURRENT_OS" = "linux" ]; then
   #   logk
   # fi
 
-  # Log checking for fd symlink.
-  log "Checking for fd symlink..."
-  # Check if fdfind command exists and fd command does not exist.
-  if command_exists fdfind && ! command_exists fd; then
-    # Check if ~/.local/bin directory exists (and is presumably in PATH).
-    if [ -d "${HOME}/.local/bin" ]; then # Ensure ~/.local/bin is on PATH
-      # Create a symbolic link from fdfind to fd in ~/.local/bin.
-      ln -sf "$(command -v fdfind)" "${HOME}/.local/bin/fd"
-      # Print success message for symlink creation.
-      ok "Symlinked fdfind to fd in ${HOME}/.local/bin/fd"
-    # If ~/.local/bin does not exist.
+  # Log checking for fd symlink (Debian/Ubuntu specific).
+  if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]; then
+    log "Checking for fd symlink..."
+    # Check if fdfind command exists and fd command does not exist.
+    if command_exists fdfind && ! command_exists fd; then
+      # Check if ~/.local/bin directory exists (and is presumably in PATH).
+      if [ -d "${HOME}/.local/bin" ]; then # Ensure ~/.local/bin is on PATH
+        # Create a symbolic link from fdfind to fd in ~/.local/bin.
+        ln -sf "$(command -v fdfind)" "${HOME}/.local/bin/fd"
+        # Print success message for symlink creation.
+        ok "Symlinked fdfind to fd in ${HOME}/.local/bin/fd"
+      # If ~/.local/bin does not exist.
+      else
+        # Warn that symlink cannot be created.
+        warn "${HOME}/.local/bin does not exist. Cannot create symlink for fd. Make sure it's on your PATH."
+      fi
+    # Check if fd command already exists.
+    elif command_exists fd; then
+      # Print message that fd command is already available.
+      ok "fd command already available."
+    # If fdfind is not installed.
     else
-      # Warn that symlink cannot be created.
-      warn "${HOME}/.local/bin does not exist. Cannot create symlink for fd. Make sure it's on your PATH."
+      # Warn that fdfind is not installed, so symlink cannot be created.
+      warn "fdfind not installed, cannot create fd symlink."
     fi
-  # Check if fd command already exists.
-  elif command_exists fd; then
-    # Print message that fd command is already available.
-    ok "fd command already available."
-  # If fdfind is not installed.
-  else
-    # Warn that fdfind is not installed, so symlink cannot be created.
-    warn "fdfind not installed, cannot create fd symlink."
+    # Log completion of fd symlink check.
+    logk
   fi
-  # Log completion of fd symlink check.
-  logk
 
   # Check if fnm (Node.js version manager) is not already installed.
   if [ ! -d "${HOME}/.fnm" ]; then
