@@ -271,7 +271,7 @@ install_centos_deps() {
     log_info "Installing build tools and development libraries"
     sudo dnf groupinstall -y "Development Tools"
     build_packages="gcc gcc-c++ make pkgconfig llvm"
-    dev_libraries="bzip2-devel cairo-devel libffi-devel xz-devel ncurses-devel libpq-devel readline-devel sqlite-devel openssl-devel libyaml-devel python3-devel zlib-devel tk-devel"
+    dev_libraries="bzip2-devel cairo-devel libffi-devel xz-devel ncurses-devel libpq-devel readline-devel sqlite-devel openssl-devel yaml-devel python3-devel zlib-devel tk-devel"
 
     sudo dnf install -y $build_packages $dev_libraries
 
