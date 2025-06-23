@@ -95,6 +95,8 @@ set_default_env_vars() {
   export LANG="${LANG:-en_US.UTF-8}"
   export LANGUAGE="${LANGUAGE:-en_US:en}"
   export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+  export SHELDON_CONFIG_DIR="$HOME/.sheldon"
+  export SHELDON_DATA_DIR="$HOME/.sheldon"
 
   log_debug "Environment variables set"
 }
@@ -493,12 +495,14 @@ main() {
   # Run the platform installer
   run_platform_installer
 
+
+
   log_info "Installation completed successfully!"
   log_info "Your system is now ready for bossjones/zsh-dotfiles"
   log_info ""
   log_info "Next steps:"
   log_info "1. Restart your shell or source your shell configuration"
-  log_info "2. Run: chezmoi init --apply https://github.com/bossjones/zsh-dotfiles.git"
+  log_info "2. Run: chezmoi init -R --debug -v --apply https://github.com/bossjones/zsh-dotfiles.git"
 }
 
 # Run main function
