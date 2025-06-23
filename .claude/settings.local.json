@@ -9,7 +9,8 @@
       "Bash(docker run:*)",
       "Bash(./install.sh:*)",
       "Bash(make:*)",
-      "Bash(contrib/style.sh:*)"
+      "Bash(contrib/style.sh:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }
