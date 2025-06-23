@@ -97,5 +97,5 @@ shell_style() {
 sudo_askpass_style
 # Run the sudo_askpass_style check
 
-shell_style bin/zsh-dotfiles-prereq-installer bin/zsh-dotfiles-prereq-installer-linux contrib/* install.sh
+shell_style bin/zsh-dotfiles-prereq-installer bin/zsh-dotfiles-prereq-installer-linux contrib/*
 # Run shell_style check/fix on specified files

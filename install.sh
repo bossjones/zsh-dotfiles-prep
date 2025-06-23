@@ -231,21 +231,21 @@ install_debian_deps() {
   # Install essential system packages
   log_info "Installing essential system packages"
   essential_packages="sudo curl wget git ca-certificates gnupg lsb-release apt-transport-https"
-  sudo apt-get install -y "$essential_packages"
+  sudo apt-get install -y $essential_packages
 
   # Install build tools and development libraries
   log_info "Installing build tools and development libraries"
   build_packages="build-essential g++ gcc make pkg-config llvm"
   dev_libraries="libbz2-dev libcairo2-dev libffi-dev liblzma-dev libncurses5-dev libncursesw5-dev libpq-dev libreadline-dev libsqlite3-dev libssl-dev libyaml-dev python3-dev python3-openssl zlib1g-dev tk-dev"
 
-  sudo apt-get install -y "$build_packages" "$dev_libraries"
+  sudo apt-get install -y $build_packages $dev_libraries
 
   # Install shells and utilities
   log_info "Installing shells and utilities"
   shell_packages="zsh fish elvish zsh-doc"
   utility_packages="tree unzip vim xz-utils sqlite3 openssl procps manpages manpages-dev bash-completion gzip"
 
-  sudo apt-get install -y "$shell_packages" "$utility_packages"
+  sudo apt-get install -y $shell_packages $utility_packages
 
   # Install Python 3.12 if not available from system packages
   if ! command -v python3.12 >/dev/null 2>&1; then
@@ -328,7 +328,7 @@ install_centos_deps() {
   # Install essential system packages
   log_info "Installing essential system packages"
   essential_packages="sudo curl wget git ca-certificates gnupg gnupg2 procps-ng"
-  sudo dnf install -y "$essential_packages"
+  sudo dnf install -y $essential_packages
 
   # Install build tools and development libraries
   log_info "Installing build tools and development libraries"
@@ -336,14 +336,14 @@ install_centos_deps() {
   build_packages="gcc gcc-c++ make pkgconfig llvm"
   dev_libraries="bzip2-devel cairo-devel libffi-devel xz-devel ncurses-devel libpq-devel readline-devel sqlite-devel openssl-devel python3-devel zlib-devel tk-devel libevent-devel xmlsec1-devel xmlsec1-openssl-devel libyaml-devel xvidcore-devel"
 
-  sudo dnf install -y "$build_packages" "$dev_libraries"
+  sudo dnf install -y $build_packages $dev_libraries
 
   # Install shells and utilities
   log_info "Installing shells and utilities"
   shell_packages="zsh fish"
   utility_packages="tree unzip vim xz sqlite openssl procps-ng man-pages bash-completion gzip"
 
-  sudo dnf install -y "$shell_packages" "$utility_packages"
+  sudo dnf install -y $shell_packages $utility_packages
 
   sudo dnf install --enablerepo=ol9_codeready_builder libyaml-devel libevent-devel openssl-devel readline-devel ncurses-devel zlib-devel bzip2-devel libffi-devel -y
 
