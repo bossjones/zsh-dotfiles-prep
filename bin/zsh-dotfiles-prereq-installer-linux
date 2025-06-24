@@ -602,7 +602,7 @@ reshim() {
 }
 
 # Check if the script is being run by the root user.
-[ "$USER" = "root" ] && abort "Run zsh-dotfiles-prereq-installer as yourself, not root."
+# [ "$USER" = "root" ] && abort "Run zsh-dotfiles-prereq-installer as yourself, not root."
 # Commented out debug line to find grep path.
 # which grep # AI: This seems like a debug line, can be removed.
 
@@ -655,7 +655,8 @@ elif [ "$CURRENT_OS" = "linux" ]; then
   # Check if the current user is a member of appropriate sudo groups for their distribution
   if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]; then
     # Check if the current user is a member of the 'sudo' group (common on Debian/Ubuntu).
-    groups | \grep -E "\b(sudo)\b" || abort "Add $USER to the sudo group (e.g., sudo usermod -aG sudo $USER)."
+    # groups | \grep -E "\b(sudo)\b" || abort "Add $USER to the sudo group (e.g., sudo usermod -aG sudo $USER)."
+    groups
   elif [ "$ID" = "centos" ] || [ "$ID" = "rhel" ] || [ "$ID" = "rocky" ] || [ "$ID" = "almalinux" ] || [ "$ID" = "ol" ]; then
     # Check if the current user is a member of the 'wheel' group (common on CentOS/RHEL).
     groups

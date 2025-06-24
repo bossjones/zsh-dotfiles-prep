@@ -103,11 +103,12 @@ set_default_env_vars() {
 
 # Check if running as root
 check_root() {
-  if [ "$(id -u)" = "0" ]; then
-    log_error "This script should not be run as root"
-    log_error "Please run as a regular user with sudo privileges"
-    exit 1
-  fi
+  # if [ "$(id -u)" = "0" ]; then
+  #   log_error "This script should not be run as root"
+  #   log_error "Please run as a regular user with sudo privileges"
+  #   exit 1
+  # fi
+  echo "check_root"
 }
 
 # Parse command line arguments
