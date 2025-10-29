@@ -1763,14 +1763,14 @@ if command_exists fnm; then
   # Ensure fnm environment is set for the current shell, enabling use-on-cd.
   eval "$(fnm env --use-on-cd)" # AI: Ensure fnm env is set for current shell
   # Define the Node.js version to install.
-  FNM_NODE_VERSION="v22.13.1" # AI: Using a recent LTS version, adjust as needed. Original had v22.13.1
+  FNM_NODE_VERSION="v20.19.5" # AI: Using a recent LTS version, adjust as needed. Original had v22.13.1
   # Log installing the specified Node.js version via fnm.
   log "Installing Node.js ${FNM_NODE_VERSION} via fnm..."
   # Install the Node.js version, or warn if installation fails.
   fnm install "${FNM_NODE_VERSION}" || warn "fnm install ${FNM_NODE_VERSION} failed."
   # Set the installed Node.js version as the default.
   fnm default "${FNM_NODE_VERSION}"
-  fnm install v22.14.0 || true
+  # fnm install v22.14.0 || true
   # Log successful Node.js setup.
   logk
 # If fnm command is not found.
@@ -1784,7 +1784,8 @@ logn 'fnm setup..'
 # Ensure fnm environment is set for the current shell, enabling use-on-cd.
 eval "$(fnm env --use-on-cd)"
 # Install Node.js v22.13.1 using fnm, allowing failure (|| true).
-fnm install v22.13.1 || true
+# fnm install v22.13.1 || true
+fnm install v20.19.5 || true
 # Log completion.
 logk
 
