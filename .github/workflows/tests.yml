@@ -95,7 +95,7 @@ jobs:
 
       - name: Cache Homebrew Bundler RubyGems (macOS)
         id: cache # id is used by next step
-        uses: actions/cache@v4 # Updated to v4
+        uses: actions/cache@v5 # Updated to v4
         if: matrix.is_docker == false && steps.set-up-homebrew.outputs.gems-path && matrix.os_display_name == 'macOS'
         with:
           path: ${{ steps.set-up-homebrew.outputs.gems-path }}
