@@ -501,8 +501,7 @@ fi
 logk
 
 if [ "$CURRENT_OS" = "macos" ]; then
-  # Setup Homebrew directory and permissions.
-  logn "Installing Homebrew:"
+  # Determine Homebrew prefix.
   HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
   HOMEBREW_REPOSITORY="$(brew --repository 2>/dev/null || true)"
   if [ -z "$HOMEBREW_PREFIX" ] || [ -z "$HOMEBREW_REPOSITORY" ]; then
@@ -515,32 +514,37 @@ if [ "$CURRENT_OS" = "macos" ]; then
       HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
     fi
   fi
-  [ -d "$HOMEBREW_PREFIX" ] || sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
-  if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
-    sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
+
+  if [ "$ZSH_DOTFILES_CLEAN_BREW" = "1" ]; then
+    # Setup Homebrew directory and permissions.
+    logn "Installing Homebrew (clean):"
+    [ -d "$HOMEBREW_PREFIX" ] || sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
+    if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
+      sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
+    fi
+    (
+      cd "$HOMEBREW_PREFIX"
+      sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+      sudo_askpass chown "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+    )
+
+    [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
+    sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
+
+    if [ "$HOMEBREW_PREFIX" != "$HOMEBREW_REPOSITORY" ]; then
+      ln -sf "$HOMEBREW_REPOSITORY/bin/brew" "$HOMEBREW_PREFIX/bin/brew"
+    fi
+
+    # Download Homebrew.
+    export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
+    git init
+    git config remote.origin.url "https://github.com/Homebrew/brew"
+    git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+    git fetch --tags --force
+    git reset --hard origin/master
+    unset GIT_DIR GIT_WORK_TREE
+    logk
   fi
-  (
-    cd "$HOMEBREW_PREFIX"
-    sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
-    sudo_askpass chown "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var
-  )
-
-  [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
-  sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
-
-  if [ "$HOMEBREW_PREFIX" != "$HOMEBREW_REPOSITORY" ]; then
-    ln -sf "$HOMEBREW_REPOSITORY/bin/brew" "$HOMEBREW_PREFIX/bin/brew"
-  fi
-
-  # Download Homebrew.
-  export GIT_DIR="$HOMEBREW_REPOSITORY/.git" GIT_WORK_TREE="$HOMEBREW_REPOSITORY"
-  git init
-  git config remote.origin.url "https://github.com/Homebrew/brew"
-  git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-  git fetch --tags --force
-  git reset --hard origin/master
-  unset GIT_DIR GIT_WORK_TREE
-  logk
 
   # Update Homebrew.
   export PATH="$HOMEBREW_PREFIX/bin:$PATH"
