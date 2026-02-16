@@ -795,9 +795,7 @@ logk
 
 # Check if the current OS is macOS.
 if [ "$CURRENT_OS" = "macos" ]; then
-  # Setup Homebrew directory and permissions.
-  # Log the action of installing Homebrew for macOS.
-  logn "Installing Homebrew (macOS):"
+  # Determine Homebrew prefix.
   # Initialize default Homebrew prefix variable.
   HOMEBREW_PREFIX_DEFAULT=""
   # Get the machine architecture.
@@ -835,43 +833,48 @@ if [ "$CURRENT_OS" = "macos" ]; then
     HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}"
   fi
 
-  # Create the Homebrew prefix directory if it doesn't exist, using sudo.
-  [ -d "$HOMEBREW_PREFIX" ] || sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
-  # AI: Original script had specific chown for /usr/local, this is more general for HOMEBREW_PREFIX
-  # if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
-  #   sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
-  # fi
-  # Run commands within a subshell, changing directory to Homebrew prefix.
-  (
-    cd "$HOMEBREW_PREFIX"
-    # Create necessary Homebrew subdirectories using sudo.
-    sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
-    # AI: On arm64, group might be 'staff' or 'admin'. 'admin' is more common for sudo users.
-    # Change ownership of Homebrew directories to the current user and 'admin' group using sudo.
-    sudo_askpass chown -R "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var . # AI: Added . to chown the prefix dir itself
-  )
+  if [ "$ZSH_DOTFILES_CLEAN_BREW" = "1" ]; then
+    # Setup Homebrew directory and permissions.
+    logn "Installing Homebrew (clean):"
+    # Create the Homebrew prefix directory if it doesn't exist, using sudo.
+    [ -d "$HOMEBREW_PREFIX" ] || sudo_askpass mkdir -p "$HOMEBREW_PREFIX"
+    # AI: Original script had specific chown for /usr/local, this is more general for HOMEBREW_PREFIX
+    # if [ "$HOMEBREW_PREFIX" = "/usr/local" ]; then
+    #   sudo_askpass chown "root:wheel" "$HOMEBREW_PREFIX" 2>/dev/null || true
+    # fi
+    # Run commands within a subshell, changing directory to Homebrew prefix.
+    (
+      cd "$HOMEBREW_PREFIX"
+      # Create necessary Homebrew subdirectories using sudo.
+      sudo_askpass mkdir -p Cellar Caskroom Frameworks bin etc include lib opt sbin share var
+      # AI: On arm64, group might be 'staff' or 'admin'. 'admin' is more common for sudo users.
+      # Change ownership of Homebrew directories to the current user and 'admin' group using sudo.
+      sudo_askpass chown -R "$USER:admin" Cellar Caskroom Frameworks bin etc include lib opt sbin share var . # AI: Added . to chown the prefix dir itself
+    )
 
-  # Create the Homebrew repository directory if it doesn't exist, using sudo.
-  [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
-  # Change ownership of the Homebrew repository to the current user and 'admin' group using sudo.
-  sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
+    # Create the Homebrew repository directory if it doesn't exist, using sudo.
+    [ -d "$HOMEBREW_REPOSITORY" ] || sudo_askpass mkdir -p "$HOMEBREW_REPOSITORY"
+    # Change ownership of the Homebrew repository to the current user and 'admin' group using sudo.
+    sudo_askpass chown -R "$USER:admin" "$HOMEBREW_REPOSITORY"
 
-  # Check if the brew command is not executable or doesn't exist.
-  if [ ! -x "$HOMEBREW_PREFIX/bin/brew" ]; then # AI: Only install if brew command doesn't exist or isn't executable
-    # Log downloading and installing Homebrew.
-    log "Downloading and installing Homebrew..."
-    # AI: Using the official installer is safer and handles more edge cases.
-    # Download and execute the official Homebrew installation script.
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  # If brew command exists and is executable.
-  else
-    # Log that Homebrew is already installed.
-    log "Homebrew already installed."
+    # Check if the brew command is not executable or doesn't exist.
+    if [ ! -x "$HOMEBREW_PREFIX/bin/brew" ]; then # AI: Only install if brew command doesn't exist or isn't executable
+      # Log downloading and installing Homebrew.
+      log "Downloading and installing Homebrew..."
+      # AI: Using the official installer is safer and handles more edge cases.
+      # Download and execute the official Homebrew installation script.
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # If brew command exists and is executable.
+    else
+      # Log that Homebrew is already installed.
+      log "Homebrew already installed."
+    fi
+    # Log successful Homebrew setup.
+    logk
   fi
+
   # Ensure Homebrew bin directory is in the PATH for subsequent brew commands in this script session.
   export PATH="$HOMEBREW_PREFIX/bin:$PATH"
-  # Log successful Homebrew setup.
-  logk
 
   # Update Homebrew.
   # Log the action of updating Homebrew.
