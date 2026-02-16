@@ -32,27 +32,26 @@ jobs:
   style:
     runs-on: ubuntu-22.04
     steps:
-      - name: Set up Git repository
+      - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Homebrew
+      - name: Set up Homebrew for shfmt
         uses: Homebrew/actions/setup-homebrew@master
 
-      - name: Install shfmt
+      - name: Install shfmt linter
         run: brew install shfmt
 
-      - name: Run style check
+      - name: Run shellcheck and shfmt style checks
         run: contrib/style.sh
 
   docker_tests:
     name: Test in ${{ matrix.container_name }} Container
     runs-on: ubuntu-latest
-    # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
     permissions:
-      contents: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -67,21 +66,16 @@ jobs:
             dockerfile: Dockerfile-centos-9
             image_tag: centos-9
     steps:
-      - name: Set up Git repository
+      - name: Checkout code for ${{ matrix.container_name }} test
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      # Add support for more platforms with QEMU (optional)
-      # https://github.com/docker/setup-qemu-action
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
+      - name: Set up Docker Buildx for ${{ matrix.container_name }}
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image
+      - name: Build ${{ matrix.container_name }} image (local only)
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -92,13 +86,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Setup tmate debug session before docker run container
+      - name: Debug session (pre-test) for ${{ matrix.container_name }}
         uses: mxschmitt/action-tmate@v3
         if: ${{ failure() || (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true') }}
         with:
           limit-access-to-actor: true
 
-      - name: Run Script in Container
+      - name: Run installer in ${{ matrix.container_name }} container
         run: |
           set -x
           # Run the container with the script
@@ -118,7 +112,7 @@ jobs:
 
           echo "✅ Script completed successfully"
 
-      - name: Setup tmate debug session
+      - name: Debug session (post-test) for ${{ matrix.container_name }}
         uses: mxschmitt/action-tmate@v3
         if: ${{ failure() || (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true') }}
         with:
@@ -128,7 +122,7 @@ jobs:
     name: Test on macOS
     runs-on: macOS-latest
     steps:
-      - name: Set up Git repository
+      - name: Checkout repository for macOS test
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
@@ -150,11 +144,11 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: brew install-bundler-gems
 
-      - name: Install macOS dependencies
+      - name: Install macOS test dependencies (elvish, fish, zsh)
         run: |
           brew install elvish fish zsh || echo "Failed to install some dependencies, continuing..."
 
-      - name: First run of zsh-dotfiles-prereq-installer
+      - name: First run of macOS installer
         run: bin/zsh-dotfiles-prereq-installer
         env:
           ZSH_DOTFILES_PREP_CI: 1
@@ -163,7 +157,7 @@ jobs:
           ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE: 1
           ZSH_DOTFILES_PREP_SKIP_SOFTWARE_UPDATES: 1
 
-      - name: Verify macOS installation
+      - name: Verify macOS installation artifacts
         run: |
           echo "Verifying macOS setup..."
           # shellcheck source=/dev/null
@@ -181,7 +175,7 @@ jobs:
 
           echo "macOS verification successful!"
 
-      - name: Second run of zsh-dotfiles-prereq-installer
+      - name: Second run of macOS installer (idempotency check)
         run: bin/zsh-dotfiles-prereq-installer
         env:
           ZSH_DOTFILES_PREP_CI: 1
@@ -189,7 +183,7 @@ jobs:
           ZSH_DOTFILES_PREP_SKIP_BREW_BUNDLE: 1
           ZSH_DOTFILES_PREP_SKIP_SOFTWARE_UPDATES: 1
 
-      - name: Setup tmate debug session
+      - name: Debug session (on failure) for macOS
         uses: mxschmitt/action-tmate@v3
         if: ${{ failure() || (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled == 'true') }}
         with:
@@ -224,26 +218,41 @@ jobs:
       REGISTRY_IMAGE: ${{ github.repository_owner }}/zsh-dotfiles-prep
       DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Checkout repository
+      - name: Checkout code for ${{ matrix.name }} publish
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log into GitHub Container Registry
+      - name: Log into GHCR for ${{ matrix.name }} publish
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
-      - name: Extract Docker metadata
+      - name: Verify GHCR authentication for ${{ matrix.name }}
+        run: |
+          echo "::group::GHCR Auth Verification"
+          echo "Registry: ${{ env.REGISTRY }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref }}"
+          docker manifest inspect "${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:${{ matrix.tag }}" > /dev/null 2>&1 \
+            && echo "Existing image found — auth verified" \
+            || echo "No existing image (expected on first publish) — login accepted"
+          echo "::endgroup::"
+
+      - name: Set up QEMU for ${{ matrix.name }} multi-platform build
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx for ${{ matrix.name }}
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.27.0
+
+      - name: Extract Docker metadata for ${{ matrix.name }}
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -253,7 +262,7 @@ jobs:
             type=raw,value=${{ matrix.tag }}-${{ github.sha }}
             type=raw,value=latest,enable=${{ matrix.tag == 'debian-12' }}
 
-      - name: Build and push Docker image
+      - name: Build and push ${{ matrix.name }} image to GHCR
         id: build-and-push
         uses: docker/build-push-action@v6
         with:
@@ -266,7 +275,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Generate Artifact Attestation
+      - name: Generate attestation for ${{ matrix.name }} image
         uses: actions/attest-build-provenance@v3
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}
@@ -286,26 +295,37 @@ jobs:
     permissions:
       packages: write
     steps:
-      - name: Checkout repository
+      - name: Checkout code for manifest merge
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Docker Buildx
+      - name: Set up Docker Buildx for manifest merge
         uses: docker/setup-buildx-action@v3
         with:
           driver-opts: |
             image=moby/buildkit:v0.27.0
 
-      - name: Log into GitHub Container Registry
+      - name: Log into GHCR for manifest merge
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
-      - name: Create merged manifest
+      - name: Verify GHCR authentication and published images
+        run: |
+          echo "::group::GHCR Auth & Image Verification"
+          for tag in debian-12 ubuntu-2204 centos-9; do
+            echo "Checking ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:${tag}..."
+            docker manifest inspect "${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:${tag}" > /dev/null 2>&1 \
+              || { echo "ERROR: Image with tag ${tag} not found — publish_containers may have failed"; exit 1; }
+            echo "  Found ✓"
+          done
+          echo "::endgroup::"
+
+      - name: Create merged multi-platform manifest
         run: |
           echo "Validate registry image name"
           if [[ "${{ env.REGISTRY_IMAGE }}" =~ [^a-zA-Z0-9_\-\.] ]]; then
@@ -320,6 +340,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:ubuntu-2204 \
             ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:centos-9
 
-      - name: Inspect merged image
+      - name: Inspect merged multi-platform manifest
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:latest

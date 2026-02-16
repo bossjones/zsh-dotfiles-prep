@@ -1,0 +1,45 @@
+{
+  "env": {
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "true"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(./install.sh:*)",
+      "Bash(bash -n:*)",
+      "Bash(chmod:*)",
+      "Bash(contrib/style.sh:*)",
+      "Bash(cp:*)",
+      "Bash(docker build:*)",
+      "Bash(docker compose build:*)",
+      "Bash(docker run:*)",
+      "Bash(find:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(make smoke:*)",
+      "Bash(make:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(npm:*)",
+      "Bash(pre-commit run:*)",
+      "Bash(rg:*)",
+      "Bash(sh:*)",
+      "Bash(shellcheck:*)",
+      "Bash(touch:*)",
+      "Bash(tree:*)",
+      "Bash(uv:*)",
+      "Bash(uvx pre-commit run:*)",
+      "Edit",
+      "mcp__firecrawl-mcp__firecrawl_scrape",
+      "WebFetch(domain:docs.mermaidchart.com)",
+      "WebFetch(domain:job-boards.greenhouse.io)",
+      "WebFetch(domain:www.perplexity.ai)",
+      "Write"
+    ],
+    "deny": []
+  }
+}
