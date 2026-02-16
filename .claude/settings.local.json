@@ -12,7 +12,12 @@
       "Bash(contrib/style.sh:*)",
       "Bash(rg:*)",
       "Bash(git push:*)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.github.com)",
+      "Bash(git -C /Users/bossjones/dev/bossjones/zsh-dotfiles-prep log --oneline -20)",
+      "Bash(command -v:*)",
+      "Bash(actionlint:*)"
     ],
     "deny": []
   }
