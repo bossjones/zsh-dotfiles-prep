@@ -10,7 +10,9 @@
       "Bash(./install.sh:*)",
       "Bash(make:*)",
       "Bash(contrib/style.sh:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr:*)"
     ],
     "deny": []
   }
