@@ -1401,9 +1401,13 @@ export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
 # Example CUDA library path (commented out).
 # export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" # AI: Example
 
-# FZF (Bash)
-# Source fzf bash integration script if it exists.
-[ -f ~/.fzf.bash ] && source ~/.fzf.bash
+# FZF (Shell-aware)
+# Source the appropriate fzf integration script for the current shell.
+if [ -n "$ZSH_VERSION" ]; then
+  [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+elif [ -n "$BASH_VERSION" ]; then
+  [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+fi
 
 # Cargo
 # Source Cargo environment script if it exists.
@@ -1491,11 +1495,14 @@ export PATH="${HOME}/bin:${HOME}/.bin:${HOME}/.local/bin:$PATH"
 # Example CUDA library path (commented out).
 # export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" # AI: Example
 
-# FZF (Shell agnostic if ~/.fzf.bash is POSIX compatible, otherwise Bash only)
-# Source fzf bash integration script if it exists and is POSIX compatible.
-if [ -f "$HOME/.fzf.bash" ]; then
+# FZF (Shell-aware)
+# Source the appropriate fzf integration script for the current shell.
+if [ -n "$ZSH_VERSION" ]; then
   # shellcheck source=/dev/null
-  source ~/.fzf.bash
+  [ -f "$HOME/.fzf.zsh" ] && source "$HOME/.fzf.zsh"
+elif [ -n "$BASH_VERSION" ]; then
+  # shellcheck source=/dev/null
+  [ -f "$HOME/.fzf.bash" ] && source "$HOME/.fzf.bash"
 fi
 
 # Cargo
@@ -1580,8 +1587,12 @@ export PATH="/usr/local/cuda-11.8/bin${PATH:+:${PATH}}"
 export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 
-# Source fzf bash integration script if it exists.
-[ -f ~/.fzf.bash ] && . ~/.fzf.bash
+# Source the appropriate fzf integration script for the current shell.
+if [ -n "$ZSH_VERSION" ]; then
+  [ -f ~/.fzf.zsh ] && . ~/.fzf.zsh
+elif [ -n "$BASH_VERSION" ]; then
+  [ -f ~/.fzf.bash ] && . ~/.fzf.bash
+fi
 
 # Source Cargo environment script.
 . "$HOME/.cargo/env"
@@ -1642,8 +1653,12 @@ export PATH=/usr/local/cuda-11.8/bin${PATH:+:${PATH}}
 # Add CUDA library path to LD_LIBRARY_PATH.
 export LD_LIBRARY_PATH=/usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
-# Source fzf bash integration script if it exists (may not be fully POSIX compatible).
-[ -f ~/.fzf.bash ] && . ~/.fzf.bash
+# Source the appropriate fzf integration script for the current shell.
+if [ -n "$ZSH_VERSION" ]; then
+  [ -f ~/.fzf.zsh ] && . ~/.fzf.zsh
+elif [ -n "$BASH_VERSION" ]; then
+  [ -f ~/.fzf.bash ] && . ~/.fzf.bash
+fi
 
 # Source Cargo environment script.
 . "$HOME/.cargo/env"
