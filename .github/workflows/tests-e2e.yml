@@ -276,7 +276,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Generate attestation for ${{ matrix.name }} image
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}
           subject-digest: ${{ steps.build-and-push.outputs.digest }}
