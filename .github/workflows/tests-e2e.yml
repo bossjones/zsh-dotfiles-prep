@@ -73,7 +73,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Docker Buildx for ${{ matrix.container_name }}
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build ${{ matrix.container_name }} image (local only)
         uses: docker/build-push-action@v6
@@ -247,7 +247,7 @@ jobs:
         uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx for ${{ matrix.name }}
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
         with:
           driver-opts: |
             image=moby/buildkit:v0.27.0
@@ -302,7 +302,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Docker Buildx for manifest merge
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
         with:
           driver-opts: |
             image=moby/buildkit:v0.27.0
