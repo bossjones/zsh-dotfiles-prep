@@ -18,7 +18,7 @@
 
 # > ~/.config
 # bpytop  configstore   fontconfig  gh    iterm2   lvim      op         sourcery
-# cheat   ffmpeg-tools  gallery-dl  htop  litecli  neofetch  powerline  wandb
+# cheat   ffmpeg-tools  gallery-dl  htop  litecli  fastfetch  powerline  wandb
 
 # backup ~/.asdf
 # backup ~/bin
@@ -1136,7 +1136,6 @@ if [ "$CURRENT_OS" = "linux" ]; then
       lsof \
       luarocks \
       moreutils \
-      neofetch \
       neovim \
       nnn \
       nodejs \
@@ -1156,6 +1155,27 @@ if [ "$CURRENT_OS" = "linux" ]; then
       ruby-build \
       rbenv \
       golang-go
+
+    # fastfetch is not in default repos for Debian 12 / Ubuntu 22.04
+    # (first shipped in Debian 13 / Ubuntu 23.10). Install from upstream
+    # GitHub release so the apt-get install above does not fail under set -e.
+    if ! command_exists fastfetch; then
+      log "Installing fastfetch from GitHub releases..."
+      ff_arch=""
+      case "$(dpkg --print-architecture)" in
+      amd64) ff_arch="amd64" ;;
+      arm64) ff_arch="aarch64" ;;
+      *) warn "Unsupported architecture for fastfetch: $(dpkg --print-architecture) — skipping" ;;
+      esac
+      if [ -n "$ff_arch" ]; then
+        ff_deb="$(mktemp --suffix=.deb)"
+        curl -fsSL -o "$ff_deb" \
+          "https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-${ff_arch}.deb"
+        sudo_askpass dpkg -i "$ff_deb" || sudo_askpass apt-get install -f -y
+        rm -f "$ff_deb"
+        logk
+      fi
+    fi
   # Check if this is a CentOS/RHEL system
   elif [ "$ID" = "centos" ] || [ "$ID" = "rhel" ] || [ "$ID" = "rocky" ] || [ "$ID" = "almalinux" ] || [ "$ID" = "ol" ]; then
     # Update package lists
