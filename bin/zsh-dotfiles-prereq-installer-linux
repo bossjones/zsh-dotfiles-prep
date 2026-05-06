@@ -18,7 +18,7 @@
 
 # > ~/.config
 # bpytop  configstore   fontconfig  gh    iterm2   lvim      op         sourcery
-# cheat   ffmpeg-tools  gallery-dl  htop  litecli  neofetch  powerline  wandb
+# cheat   ffmpeg-tools  gallery-dl  htop  litecli  fastfetch  powerline  wandb
 
 # backup ~/.asdf
 # backup ~/bin
@@ -1136,7 +1136,7 @@ if [ "$CURRENT_OS" = "linux" ]; then
       lsof \
       luarocks \
       moreutils \
-      neofetch \
+      fastfetch \
       neovim \
       nnn \
       nodejs \

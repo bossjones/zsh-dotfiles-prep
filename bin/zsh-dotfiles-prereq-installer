@@ -18,7 +18,7 @@
 
 # > ~/.config
 # bpytop  configstore   fontconfig  gh    iterm2   lvim      op         sourcery
-# cheat   ffmpeg-tools  gallery-dl  htop  litecli  neofetch  powerline  wandb
+# cheat   ffmpeg-tools  gallery-dl  htop  litecli  fastfetch  powerline  wandb
 
 # backup ~/.asdf
 # backup ~/bin
@@ -582,7 +582,7 @@ if [ "$CURRENT_OS" = "macos" ]; then
   logk
   brew install curl diff-so-fancy direnv fd gnutls findutils fnm fpp fzf gawk gcc gh git gnu-indent gnu-sed gnu-tar grep gzip || true
   logk
-  brew install hub jq less lesspipe libxml2 lsof luarocks luv moreutils neofetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper || true
+  brew install hub jq less lesspipe libxml2 lsof luarocks luv moreutils fastfetch neovim nnn node tree pyenv pyenv-virtualenv pyenv-virtualenvwrapper || true
   logk
   brew install ruby-build rbenv reattach-to-user-namespace ripgrep rsync screen screenfetch shellcheck shfmt unzip urlview vim watch wget zlib zsh openssl@1.1 git-delta || true
   brew install kadwanev/brew/retry || true
