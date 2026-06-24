@@ -573,8 +573,9 @@ if [ "$CURRENT_OS" = "macos" ]; then
 
   logn '(brew) Installing openssl readline sqlite3 xz zlib tcl-tk'
   brew tap bossjones/asdf-versions || true
+  brew trust bossjones/asdf-versions || true
   logk
-  brew install asdf@0.11.2 || true
+  brew install bossjones/asdf-versions/asdf@0.11.2 || true
   logk
   brew install openssl readline sqlite3 xz zlib tcl-tk pkg-config autogen bash bzip2 libffi cheat python@3.10 || true
   logk
