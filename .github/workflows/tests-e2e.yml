@@ -231,16 +231,46 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Verify GHCR authentication for ${{ matrix.name }}
+      - name: Verify GHCR push permission for ${{ matrix.name }}
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
         run: |
-          echo "::group::GHCR Auth Verification"
+          echo "::group::GHCR Push Permission Probe"
           echo "Registry: ${{ env.REGISTRY }}"
           echo "Image: ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}"
-          echo "Actor: ${{ github.actor }}"
+          echo "Actor: ${GHCR_USER}"
           echo "Ref: ${{ github.ref }}"
-          docker manifest inspect "${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }}:${{ matrix.tag }}" > /dev/null 2>&1 \
-            && echo "Existing image found — auth verified" \
-            || echo "No existing image (expected on first publish) — login accepted"
+
+          # Request a push-scoped registry token. GHCR grants this optimistically;
+          # package-level ACLs are only enforced on the actual write operation below.
+          bearer="$(curl -fsS -u "${GHCR_USER}:${GHCR_TOKEN}" \
+            "https://${{ env.REGISTRY }}/token?scope=repository:${{ env.REGISTRY_IMAGE }}:pull,push" \
+            | jq -r '.token')"
+
+          # Initiating a blob upload requires write access but leaves nothing behind.
+          http_code="$(curl -sS -o /tmp/ghcr-probe-body -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer ${bearer}" \
+            -D /tmp/ghcr-probe-headers \
+            "https://${{ env.REGISTRY }}/v2/${{ env.REGISTRY_IMAGE }}/blobs/uploads/")"
+
+          if [ "${http_code}" = "202" ]; then
+            echo "Push permission verified (blob upload initiation accepted)"
+            # Best-effort cancel of the probe upload session
+            location="$(awk 'tolower($1) == "location:" {print $2}' /tmp/ghcr-probe-headers | tr -d '\r')"
+            if [ -n "${location}" ]; then
+              case "${location}" in
+                /*) location="https://${{ env.REGISTRY }}${location}" ;;
+              esac
+              curl -sS -X DELETE -H "Authorization: Bearer ${bearer}" "${location}" > /dev/null || true
+            fi
+          else
+            echo "::error::GITHUB_TOKEN cannot push to ${{ env.REGISTRY }}/${{ env.REGISTRY_IMAGE }} (HTTP ${http_code})."
+            echo "::error::The GHCR package exists but does not grant this repository write access."
+            echo "::error::Fix: https://github.com/users/${{ github.repository_owner }}/packages/container/zsh-dotfiles-prep/settings -> Manage Actions access -> add ${{ github.repository }} with Write role."
+            cat /tmp/ghcr-probe-body || true
+            exit 1
+          fi
           echo "::endgroup::"
 
       - name: Set up QEMU for ${{ matrix.name }} multi-platform build

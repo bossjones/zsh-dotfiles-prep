@@ -148,3 +148,4 @@ cython_debug/
 *.log
 .ruff_cache/
 .node-version
+.boss-skills/
